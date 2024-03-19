@@ -1,6 +1,7 @@
 //  A compiler from a very simple Pascal-like structured language LL(k)
 //  to 64-bit 80x86 Assembly langage
 //  Copyright (C) 2019 Pierre Jourlin
+//  Copyright (C) 2024 Quentin Garnier
 //
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -24,7 +25,7 @@
 
 using namespace std;
 
-char current;				// Current car	
+char current;				// Current chmar	
 
 void ReadChar(void){		// Read character and skip spaces until 
 				// non space character is read
@@ -97,7 +98,7 @@ void ArithmeticExpression(void){
 
 int main(void){	// First version : Source code on standard input and assembly code on standard output
 	// Header for gcc assembler / linker
-	cout << "\t\t\t# This code was produced by the CERI Compiler"<<endl;
+	cout << "\t\t\t#This code was produced by the CERI Compiler"<<endl;
 	cout << "\t.text\t\t# The following lines contain the program"<<endl;
 	cout << "\t.globl main\t# The main function must be visible from outside"<<endl;
 	cout << "main:\t\t\t# The main function body :"<<endl;
