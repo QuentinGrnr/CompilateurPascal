@@ -25,12 +25,23 @@
 
 using namespace std;
 
-char current;				// Current chmar	
+char current, lookedAhead;                // Current char    
+int NLookedAhead=0;
 
-void ReadChar(void){		// Read character and skip spaces until 
-				// non space character is read
-	while(cin.get(current) && (current==' '||current=='\t'||current=='\n'))
-	   	cin.get(current);
+void ReadChar(void){
+    if(NLookedAhead>0){
+        current=lookedAhead;    // Char has already been read
+        NLookedAhead--;
+    }
+    else
+        // Read character and skip spaces until 
+        // non space character is read
+        while(cin.get(current) && (current==' '||current=='\t'||current=='\n'));
+}
+
+void LookAhead(void){
+    while(cin.get(lookedAhead) && (lookedAhead==' '||lookedAhead=='\t'||lookedAhead=='\n'));
+    NLookedAhead++;
 }
 
 void Error(string s){
@@ -96,6 +107,69 @@ void ArithmeticExpression(void){
 
 }
 
+char OpRel(){
+	char oprel = current;
+	if(current!='<' && current!='>' && current!='=')
+		Error("Opérateur relationnel attendu");
+	else {
+		ReadChar();
+		return oprel;
+	}
+}
+
+
+
+// exp := ArithmeticExpression(operateurRelationel ExpArithmetique)
+void Expression() {
+    string oprel = "";
+    ArithmeticExpression();
+    
+    if (current == '<' || current == '>' || current == '=' ) {
+        oprel += OpRel();
+        LookAhead();
+        if (current == '<' || current == '>' || current == '=' ) {
+            oprel += OpRel();
+        }
+        ArithmeticExpression();
+    }
+    
+    cout << "\tpop %rbx" << endl;
+    cout << "\tpop %rax" << endl;
+    cout << "\tcmp %rbx, %rax" << endl; 
+
+    if (oprel.length() == 1) {
+        if (oprel == "<") {
+            cout << "\tjb Vrai" << endl;
+        } else if (oprel == ">") {
+            cout << "\tja Vrai" << endl;
+        } else {
+            Error("Opérateur relationnel non géré");
+        }
+        cout << "\tFaux : push $0" << endl;
+        cout << "\tjmp FinExp" << endl;
+        cout << "\tVrai : push $1" << endl;
+        cout << "\tFinExp :" << endl;
+    } else if (oprel.length() == 2) {
+        if (oprel == "<=") {
+            cout << "\tjbe Vrai" << endl;
+        } else if (oprel == ">=") {
+            cout << "\tjae Vrai" << endl;
+        } else if (oprel == "<>") {
+            cout << "\tjne Vrai" << endl;
+        } else if (oprel == "==") {
+            cout << "\tje Vrai" << endl;
+        } else {
+            Error("Opérateur relationnel non géré");
+        }
+        cout << "\tFaux : push $0" << endl;
+        cout << "\tjmp FinExp" << endl;
+        cout << "\tVrai : push $1" << endl;
+        cout << "\tFinExp :" << endl;
+    } else {
+        Error("Opérateur relationnel attendu");
+    }
+}
+
 int main(void){	// First version : Source code on standard input and assembly code on standard output
 	// Header for gcc assembler / linker
 	cout << "\t\t\t#This code was produced by the CERI Compiler"<<endl;
@@ -106,7 +180,7 @@ int main(void){	// First version : Source code on standard input and assembly co
 
 	// Let's proceed to the analysis and code production
 	ReadChar();
-	ArithmeticExpression();
+	Expression();
 	ReadChar();
 	// Trailer for the gcc assembler / linker
 	cout << "\tmovq %rbp, %rsp\t\t# Restore the position of the stack's top"<<endl;

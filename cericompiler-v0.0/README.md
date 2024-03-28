@@ -22,7 +22,7 @@ To : 64 bit 80x86 assembly langage (AT&T)
 
 **Produce the executable (with debug info) :**
 
-> gcc -ggdb test.s -o test :
+> gcc -ggdb test.s -o test
 
 **Debug the executable :**
 
