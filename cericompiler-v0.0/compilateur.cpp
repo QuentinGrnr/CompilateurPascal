@@ -145,10 +145,6 @@ void Expression() {
         } else {
             Error("Opérateur relationnel non géré");
         }
-        cout << "\tFaux : push $0" << endl;
-        cout << "\tjmp FinExp" << endl;
-        cout << "\tVrai : push $1" << endl;
-        cout << "\tFinExp :" << endl;
     } else if (oprel.length() == 2) {
         if (oprel == "<=") {
             cout << "\tjbe Vrai" << endl;
@@ -161,13 +157,13 @@ void Expression() {
         } else {
             Error("Opérateur relationnel non géré");
         }
-        cout << "\tFaux : push $0" << endl;
-        cout << "\tjmp FinExp" << endl;
-        cout << "\tVrai : push $1" << endl;
-        cout << "\tFinExp :" << endl;
     } else {
         Error("Opérateur relationnel attendu");
     }
+		cout << "\tFaux : push $0" << endl;
+        cout << "\tjmp FinExp" << endl;
+        cout << "\tVrai : push $1" << endl;
+        cout << "\tFinExp :" << endl;
 }
 
 int main(void){	// First version : Source code on standard input and assembly code on standard output
