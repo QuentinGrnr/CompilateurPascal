@@ -40,3 +40,9 @@ To : 64 bit 80x86 assembly langage (AT&T)
 
 > git pull -u origin master
 
+# Ad by Garnier Quentin :
+
+**Si vous avez une erreur de type "relocation R_X86_64_32S", essayez avec ces options :**
+
+> gcc -ggdb -no-pie -fno-pie test.s -o test
+
