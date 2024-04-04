@@ -61,7 +61,7 @@ void AdditiveOperator(void){
 	else
 		Error("Opérateur additif attendu");	   // Additive operator expected
 }
-		
+
 void Digit(void){
 	if((current<'0')||(current>'9'))
 		Error("Chiffre attendu");		   // Digit expected
@@ -70,6 +70,23 @@ void Digit(void){
 		ReadChar();
 	}
 }
+
+// Number := Digit{Digit}
+void Number (void){
+	if(current<'0'||current>'9')
+		Error("Chiffre attendu");		// Digit expected
+	else{
+		string number="";
+		while(current>='0'&&current<='9'){
+			number+=current;
+			ReadChar();
+		}
+		cout << number	<<endl;
+		cout << "\tpush $"<<number<<endl;
+	}
+}
+		
+
 
 void ArithmeticExpression(void);			// Called by Term() and calls Term()
 
@@ -84,7 +101,7 @@ void Term(void){
 	}
 	else 
 		if (current>='0' && current <='9')
-			Digit();
+			Number();
 	     	else
 			Error("'(' ou chiffre attendu");
 }
@@ -117,53 +134,66 @@ char OpRel(){
 	}
 }
 
-
-
 // exp := ArithmeticExpression(operateurRelationel ExpArithmetique)
 void Expression() {
     string oprel = "";
     ArithmeticExpression();
-    
-    if (current == '<' || current == '>' || current == '=' ) {
-        oprel += OpRel();
-        LookAhead();
-        if (current == '<' || current == '>' || current == '=' ) {
-            oprel += OpRel();
-        }
-        ArithmeticExpression();
-    }
+    LookAhead();
+    if (current == '<' && lookedAhead == '>') {
+		oprel = "<>";
+		ReadChar();
+		ReadChar();
+	} else if (current == '<' && lookedAhead == '='){
+		oprel = "<=";
+		ReadChar();
+		ReadChar();
+	} else if (current =='<'){
+		oprel = "<";
+		ReadChar();
+	} else if (current == '>' && lookedAhead == '=') {
+		oprel = ">=";
+		ReadChar();
+		ReadChar();
+	} else if (current == '>') {
+		oprel = ">";
+		ReadChar();
+	} else if (current == '=' && lookedAhead == '=') {
+		oprel = "==";
+		ReadChar();
+		ReadChar();
+	} else {
+		Error("Opérateur relationnel attendu");
+	}
+
+	ArithmeticExpression();
+	cout << "\tpop %rbx" << endl;
+	cout << "\tpop %rax" << endl;
+	cout << "\tcmp %rbx, %rax" << endl;
     
     cout << "\tpop %rbx" << endl;
     cout << "\tpop %rax" << endl;
     cout << "\tcmp %rbx, %rax" << endl; 
 
-    if (oprel.length() == 1) {
-        if (oprel == "<") {
-            cout << "\tjb Vrai" << endl;
-        } else if (oprel == ">") {
-            cout << "\tja Vrai" << endl;
-        } else {
-            Error("Opérateur relationnel non géré");
-        }
-    } else if (oprel.length() == 2) {
-        if (oprel == "<=") {
-            cout << "\tjbe Vrai" << endl;
-        } else if (oprel == ">=") {
-            cout << "\tjae Vrai" << endl;
-        } else if (oprel == "<>") {
-            cout << "\tjne Vrai" << endl;
-        } else if (oprel == "==") {
-            cout << "\tje Vrai" << endl;
-        } else {
-            Error("Opérateur relationnel non géré");
-        }
-    } else {
-        Error("Opérateur relationnel attendu");
-    }
-		cout << "\tFaux : push $0" << endl;
-        cout << "\tjmp FinExp" << endl;
-        cout << "\tVrai : push $1" << endl;
-        cout << "\tFinExp :" << endl;
+	if (oprel == "<") {
+		cout << "\tjb Vrai" << endl;
+	} else if (oprel == ">") {
+		cout << "\tja Vrai" << endl;
+	} else if (oprel == "<=") {
+		cout << "\tjbe Vrai" << endl;
+	} else if (oprel == ">=") {
+		cout << "\tjae Vrai" << endl;
+	} else if (oprel == "<>") {
+		cout << "\tjne Vrai" << endl;
+	} else if (oprel == "==") {
+		cout << "\tje Vrai" << endl;
+	} else {
+		Error("Opérateur relationnel non géré");
+	}
+
+	cout << "\tFaux : push $0" << endl;
+	cout << "\tjmp FinExp" << endl;
+	cout << "\tVrai : push $1" << endl;
+	cout << "\tFinExp :" << endl;
 }
 
 int main(void){	// First version : Source code on standard input and assembly code on standard output
