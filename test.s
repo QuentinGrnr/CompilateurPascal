@@ -25,7 +25,7 @@ Suite1:
 	pop %rbx
 	pop %rax
 	mulq	%rbx
-	push %rax
+	push %rax	# MUL
 	pop %rax
 	pop %rbx
 	cmpq %rax, %rbx
@@ -36,7 +36,7 @@ Vrai2:	push $0xFFFFFFFFFFFFFFFF		# True
 Suite2:
 	pop %rbx
 	pop %rax
-	subq	%rbx, %rax
+	addq	%rbx, %rax	# OR
 	push %rax
 	pop z
 	push $5
@@ -45,11 +45,11 @@ Suite2:
 	pop %rax
 	movq $0, %rdx
 	div %rbx
-	push %rax
+	push %rax	# DIV
 	push $2
 	pop %rbx
 	pop %rax
-	addq	%rbx, %rax
+	addq	%rbx, %rax	# ADD
 	push %rax
 	push $7
 	push $5
@@ -57,7 +57,7 @@ Suite2:
 	pop %rax
 	movq $0, %rdx
 	div %rbx
-	push %rdx
+	push %rdx	# MOD
 	pop %rax
 	pop %rbx
 	cmpq %rax, %rbx
