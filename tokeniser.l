@@ -20,14 +20,15 @@ using namespace std;
 %option yylineno
 
 stringconst  \"[^\n"]+\"
-ws      [ \t\n\r]+
+ws      [ \t\n\r]+ 
 alpha   [A-Za-z]
 digit   [0-9]
-number  {digit}+
+number  {digit}+ 
+keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"FOR"|"DO"|"To"|"BEGIN"|"END")
 id	{alpha}({alpha}|{digit})*
-addop	(\+|\-|\|\|)
-mulop	(\*|\/|%|\&\&)
-relop	(\<|\>|"=="|\<=|\>=|!=)
+addop	(\+|\-|\|\|) 
+mulop	(\*|\/|%|\&\&) 
+relop	(\<|\>|"=="|\<=|\>=|!=) 
 unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.]+
 
 %%
@@ -36,6 +37,7 @@ unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.]+
 {mulop}		return MULOP;
 {relop}		return RELOP;
 {number}	return NUMBER;
+{keyword}	return KEYWORD;
 {id}		return ID;
 {stringconst}	return STRINGCONST;
 "["		return RBRACKET;

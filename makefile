@@ -1,9 +1,9 @@
 all:	test
 clean:
 		rm *.o *.s
-		rm tokensiser.cpp
+		rm tokeniser.cpp
 tokeniser.cpp:	tokeniser.l
-		flex++ -d -otokeniser.cpp tokeniser.l
+		flex++ -d -o tokeniser.cpp tokeniser.l
 tokeniser.o:	tokeniser.cpp
 		g++ -c tokeniser.cpp
 compilateur:	compilateur.cpp tokeniser.o

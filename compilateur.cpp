@@ -28,6 +28,7 @@
 
 using namespace std;
 
+enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END};
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
@@ -50,7 +51,7 @@ bool IsDeclared(const char *id){
 
 
 void Error(string s){
-	cerr << "Ligne n°"<<lexer->lineno()<<", lu : '"<<lexer->YYText()<<"'("<<current<<"), mais ";
+	cerr << "Ligne n°"<<lexer->lineno()<<", lu : '"<<lexer->YYText()<<"'("<<current<<"), mais "; // lineno() retourne le numéro de la ligne actuelle
 	cerr<< s << endl;
 	exit(-1);
 }
@@ -58,8 +59,14 @@ void Error(string s){
 // Program := [DeclarationPart] StatementPart
 // DeclarationPart := "[" Letter {"," Letter} "]"
 // StatementPart := Statement {";" Statement} "."
-// Statement := AssignementStatement
+// Statement := AssignementStatement | IfStatement | WhileStatement | ForStatement | BlockStatement
+
 // AssignementStatement := Letter "=" Expression
+// IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]
+// WhileStatement := "WHILE" Expression "DO" Statement
+// ForStatement := "FOR" AssignementStatement "To" Expression "DO" Statement
+// BlockStatement := "BEGIN" Statement { ";" Statement } "END"
+
 
 // Expression := SimpleExpression [RelationalOperator SimpleExpression]
 // SimpleExpression := Term {AdditiveOperator Term}
@@ -80,8 +87,8 @@ void Identifier(void){
 }
 
 void Number(void){
-	cout <<"\tpush $"<<atoi(lexer->YYText())<<endl;
-	current=(TOKEN) lexer->yylex();
+	cout <<"\tpush $"<<atoi(lexer->YYText())<<endl; // YYText =/ readchar car on accede a la valeur du token sans avancer le curseur
+	current=(TOKEN) lexer->yylex(); // YYlex envoie le type du token actuel et avance le curseur
 }
 
 void Expression(void);			// Called by Term() and calls Term()
@@ -225,7 +232,7 @@ void DeclarationPart(void){
 // RelationalOperator := "==" | "!=" | "<" | ">" | "<=" | ">="  
 OPREL RelationalOperator(void){
 	OPREL oprel;
-	if(strcmp(lexer->YYText(),"==")==0)
+	if(strcmp(lexer->YYText(),"==")==0) // strcmp renvoie 0 si les deux chaines sont égales et un nombre positif ou négatif si elles sont différentes
 		oprel=EQU;
 	else if(strcmp(lexer->YYText(),"!=")==0)
 		oprel=DIFF;
@@ -281,6 +288,33 @@ void Expression(void){
 	}
 }
 
+KEYWORDS GetKeyword(void){
+	KEYWORDS kw;
+	if(strcmp(lexer->YYText(),"IF")==0)
+		kw=IF;
+	else if(strcmp(lexer->YYText(),"THEN")==0)
+		kw=THEN;
+	else if(strcmp(lexer->YYText(),"ELSE")==0)
+		kw=ELSE;
+	else if(strcmp(lexer->YYText(),"WHILE")==0)
+		kw=WHILE;
+	else if(strcmp(lexer->YYText(),"FOR")==0)
+		kw=FOR;
+	else if(strcmp(lexer->YYText(),"DO")==0)
+		kw=DO;
+	else if(strcmp(lexer->YYText(),"TO")==0)
+		kw=TO;
+	else if(strcmp(lexer->YYText(),"BEGIN")==0)
+		kw=BEGIN;
+	else if(strcmp(lexer->YYText(),"END")==0)
+		kw=END;
+	else
+		kw=IF;
+	return kw;
+}
+
+void Statement(void);			// Called by StatementPart() and calls AssignementStatement()
+
 // AssignementStatement := Identifier ":=" Expression
 void AssignementStatement(void){
 	string variable;
@@ -299,9 +333,43 @@ void AssignementStatement(void){
 	cout << "\tpop "<<variable<<endl;
 }
 
+// IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]
+void IfStatement(void){
+	if (current!=KEYWORD || GetKeyword()!=IF)
+		Error("IF attendu");
+	current=(TOKEN) lexer->yylex();
+	Expression();
+	if (current!=KEYWORD || GetKeyword()!=THEN)
+		Error("THEN attendu");
+	current=(TOKEN) lexer->yylex();
+	cout << "Vrai"<<TagNumber<<":"<<endl;
+	Statement();
+	if (current==KEYWORD && GetKeyword()==ELSE){
+		cout << "Suite"<<TagNumber<<":"<<endl;
+		current=(TOKEN) lexer->yylex();
+		Statement();
+	}
+	cout << "Suite"<<TagNumber++<<":"<<endl; 
+}
+
 // Statement := AssignementStatement
 void Statement(void){
-	AssignementStatement();
+	switch(current){
+		case ID:
+			AssignementStatement();
+			break;
+		case KEYWORD:
+			switch(GetKeyword()){
+				case IF:
+					IfStatement();
+					break;
+				default:
+					Error("Instruction non reconnue");
+			}
+			break;
+		default:
+			Error("Instruction non reconnue");
+	}
 }
 
 // StatementPart := Statement {";" Statement} "."

@@ -67,5 +67,25 @@ Suite2:
 Vrai3:	push $0xFFFFFFFFFFFFFFFF		# True
 Suite3:
 	pop b
-	movq %rbp, %rsp		# Restore the position of the stack's top
-	ret			# Return from main function
+	push $8
+	push $2
+	push $2
+	pop %rbx
+	pop %rax
+	mulq	%rbx
+	push %rax	# MUL
+	push $2
+	pop %rbx
+	pop %rax
+	mulq	%rbx
+	push %rax	# MUL
+	pop %rax
+	pop %rbx
+	cmpq %rax, %rbx
+	je Vrai4	# If equal
+	push $0		# False
+	jmp Suite4
+Vrai4:	push $0xFFFFFFFFFFFFFFFF		# True
+Suite4:
+Vrai4:
+=
