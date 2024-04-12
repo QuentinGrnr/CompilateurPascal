@@ -335,24 +335,59 @@ void AssignementStatement(void){
 
 // IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]
 void IfStatement(void){
-	if (current!=KEYWORD || GetKeyword()!=IF)
-		Error("IF attendu");
+	unsigned long TagNumber1, TagNumber2;
+	if(current!=KEYWORD && GetKeyword()!=IF)
+		Error("Mot clé 'IF' attendu");
 	current=(TOKEN) lexer->yylex();
+	TagNumber1=++TagNumber;
 	Expression();
-	if (current!=KEYWORD || GetKeyword()!=THEN)
-		Error("THEN attendu");
+	if(current!=KEYWORD && GetKeyword()!=THEN)
+		Error("Mot clé 'THEN' attendu");
+	cout << "\tpop %rax"<<endl;
+	cout << "\tcmpq $0, %rax"<<endl; // compare with 0 to know if the expression is false
+	cout << "\tje Suite"<<TagNumber1<<endl; // if false, jump to the end of the if statement
 	current=(TOKEN) lexer->yylex();
-	cout << "Vrai"<<TagNumber<<":"<<endl;
 	Statement();
-	if (current==KEYWORD && GetKeyword()==ELSE){
-		cout << "Suite"<<TagNumber<<":"<<endl;
+	TagNumber2=++TagNumber;
+	cout << "\tjmp Suite"<<TagNumber2<<endl;
+	cout << "Suite"<<TagNumber1<<":"<<endl;
+	if(current==KEYWORD){
+		if(GetKeyword()!=ELSE)
+			Error("Mot clé 'ELSE' attendu");
 		current=(TOKEN) lexer->yylex();
 		Statement();
 	}
-	cout << "Suite"<<TagNumber++<<":"<<endl; 
+	cout << "Suite"<<TagNumber2<<":"<<endl;
 }
 
-// Statement := AssignementStatement
+// WhileStatement := "WHILE" Expression "DO" Statement
+void WhileStatement(void){
+	unsigned long TagNumber1, TagNumber2;
+	if(current!=KEYWORD && GetKeyword()!=WHILE)
+		Error("Mot clé 'WHILE' attendu");
+	current=(TOKEN) lexer->yylex();
+	TagNumber1=++TagNumber;
+	cout << "Suite"<<TagNumber1<<":"<<endl;
+	Expression();
+	cout << "\tpop %rax"<<endl;
+	cout << "\tcmpq $0, %rax"<<endl; // compare with 0 to know if the expression is false
+	cout << "\tje Suite"<<++TagNumber<<endl; // if false, jump to the end of the while statement
+	if(current!=KEYWORD && GetKeyword()!=DO)
+		Error("Mot clé 'DO' attendu");
+	current=(TOKEN) lexer->yylex();
+	Statement();
+	cout << "\tjmp Suite"<<TagNumber1<<endl;
+	cout << "Suite"<<TagNumber<<":"<<endl;
+}
+
+// FORStatement := "FOR" AssignementStatement "TO" Expression "DO" Statement
+void ForStatement(void){
+
+
+}
+
+
+// Statement := AssignementStatement | IfStatement | WhileStatement | ForStatement | BlockStatement
 void Statement(void){
 	switch(current){
 		case ID:
@@ -362,6 +397,12 @@ void Statement(void){
 			switch(GetKeyword()){
 				case IF:
 					IfStatement();
+					break;
+				case WHILE:
+					WhileStatement();
+					break;
+				case FOR:
+					ForStatement();
 					break;
 				default:
 					Error("Instruction non reconnue");
