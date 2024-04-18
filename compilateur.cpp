@@ -316,7 +316,7 @@ KEYWORDS GetKeyword(void){
 void Statement(void);			// Called by StatementPart() and calls AssignementStatement()
 
 // AssignementStatement := Identifier ":=" Expression
-void AssignementStatement(void){
+string AssignementStatement(void){
 	string variable;
 	if(current!=ID)
 		Error("Identificateur attendu");
@@ -331,59 +331,90 @@ void AssignementStatement(void){
 	current=(TOKEN) lexer->yylex();
 	Expression();
 	cout << "\tpop "<<variable<<endl;
+	return variable;
 }
 
 // IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]
 void IfStatement(void){
-	unsigned long TagNumber1, TagNumber2;
+	unsigned long TagNumber1 = ++TagNumber;
+	
 	if(current!=KEYWORD && GetKeyword()!=IF)
 		Error("Mot clé 'IF' attendu");
 	current=(TOKEN) lexer->yylex();
-	TagNumber1=++TagNumber;
 	Expression();
-	if(current!=KEYWORD && GetKeyword()!=THEN)
-		Error("Mot clé 'THEN' attendu");
 	cout << "\tpop %rax"<<endl;
 	cout << "\tcmpq $0, %rax"<<endl; // compare with 0 to know if the expression is false
-	cout << "\tje Suite"<<TagNumber1<<endl; // if false, jump to the end of the if statement
+	cout << "\tje ELSE"<<TagNumber1<<endl; // if false, jump to the else statement
+	if(current!=KEYWORD && GetKeyword()!=THEN)
+		Error("Mot clé 'THEN' attendu");
 	current=(TOKEN) lexer->yylex();
 	Statement();
-	TagNumber2=++TagNumber;
-	cout << "\tjmp Suite"<<TagNumber2<<endl;
-	cout << "Suite"<<TagNumber1<<":"<<endl;
-	if(current==KEYWORD){
-		if(GetKeyword()!=ELSE)
-			Error("Mot clé 'ELSE' attendu");
-		current=(TOKEN) lexer->yylex();
-		Statement();
-	}
-	cout << "Suite"<<TagNumber2<<":"<<endl;
+	cout << "\tjmp FINIF"<<TagNumber1<<endl;
+	cout << "ELSE"<<TagNumber1<<":"<<endl;
+	if(current!=KEYWORD && GetKeyword()!=ELSE)
+		Error("Mot clé 'ELSE' attendu");
+	current=(TOKEN) lexer->yylex();
+	Statement();
+	cout << "FINIF"<<TagNumber1<<":"<<endl;
 }
 
 // WhileStatement := "WHILE" Expression "DO" Statement
 void WhileStatement(void){
-	unsigned long TagNumber1, TagNumber2;
+	unsigned long TagNumber1=++TagNumber;
 	if(current!=KEYWORD && GetKeyword()!=WHILE)
 		Error("Mot clé 'WHILE' attendu");
 	current=(TOKEN) lexer->yylex();
-	TagNumber1=++TagNumber;
-	cout << "Suite"<<TagNumber1<<":"<<endl;
+	cout << "TESTWHILE"<<TagNumber1<<":"<<endl;
 	Expression();
 	cout << "\tpop %rax"<<endl;
 	cout << "\tcmpq $0, %rax"<<endl; // compare with 0 to know if the expression is false
-	cout << "\tje Suite"<<++TagNumber<<endl; // if false, jump to the end of the while statement
+	cout << "\tje FINWHILE"<<TagNumber1<<endl; // if false, jump to the end of the while statement
 	if(current!=KEYWORD && GetKeyword()!=DO)
 		Error("Mot clé 'DO' attendu");
 	current=(TOKEN) lexer->yylex();
 	Statement();
-	cout << "\tjmp Suite"<<TagNumber1<<endl;
-	cout << "Suite"<<TagNumber<<":"<<endl;
+	cout << "\tjmp TESTWHILE"<<TagNumber1<<endl;
+	cout << "FINWHILE"<<TagNumber1<<":"<<endl;
 }
 
 // FORStatement := "FOR" AssignementStatement "TO" Expression "DO" Statement
 void ForStatement(void){
+	string varboucle;
+	unsigned int TagNumber1=++TagNumber;
+	if(current!=KEYWORD && GetKeyword()!=FOR)
+		Error("Mot clé 'FOR' attendu");
+	current=(TOKEN) lexer->yylex();
+	varboucle=AssignementStatement();
+	if(current!=KEYWORD && GetKeyword()!=TO)
+		Error("Mot clé 'TO' attendu");
+	current=(TOKEN) lexer->yylex();
+	cout << "TESTFOR"<<TagNumber1<<":"<<endl;
+	Expression();
+	cout << "\tpop %rax"<<endl;
+	cout << "\tcmpq "<<varboucle<<", %rax"<<endl;
+	cout << "\tjb FINFOR"<<TagNumber1<<endl;
+	if(current!=KEYWORD && GetKeyword()!=DO)
+		Error("Mot clé 'DO' attendu");
+	current=(TOKEN) lexer->yylex();
+	Statement();
+	cout << "\tincq "<<varboucle<<endl;
+	cout << "\tjmp TESTFOR"<<TagNumber1<<endl;
+	cout << "FINFOR"<<TagNumber1<<":"<<endl;
+}
 
-
+// BlockStatement := "BEGIN" Statement { ";" Statement } "END"
+void BlockStatement(void){
+	if(current!=KEYWORD && GetKeyword()!=BEGIN)
+		Error("Mot clé 'BEGIN' attendu");
+	current=(TOKEN) lexer->yylex();
+	Statement();
+	while(current==SEMICOLON){
+		current=(TOKEN) lexer->yylex();
+		Statement();
+	}
+	if(current!=KEYWORD && GetKeyword()!=END)
+		Error("Mot clé 'END' attendu");
+	current=(TOKEN) lexer->yylex();
 }
 
 
@@ -403,6 +434,9 @@ void Statement(void){
 					break;
 				case FOR:
 					ForStatement();
+					break;
+				case BEGIN:
+					BlockStatement();
 					break;
 				default:
 					Error("Instruction non reconnue");
