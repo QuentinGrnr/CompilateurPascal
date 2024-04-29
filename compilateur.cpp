@@ -418,24 +418,25 @@ void DisplayStatement(void){
 	unsigned long long TagNumber1=++TagNumber;
 	current=(TOKEN) lexer->yylex();
 	type = Expression();
+	cout << ".cfi_startproc"<<endl;
+	cout << "\tendbr64"<<endl;
 	if (type == INTEGER){
-		cout << "\tpop %rdx\t# The value to be displayed"<<endl;
-		cout << "\tmovq $FormatString1, %rsi\t# \"%llu\\n\""<<endl;
+		cout << "\tpop %rdx    \t# The value to be displayed"<<endl;
+		cout << "\tmovq $FormatString1, %rsi   \t# \"%llu\\n\""<<endl;
 	} else if (type == BOOLEAN){
-		cout << "\tpop %rdx\t# Zero : False, non-zero : true"<<endl;
+		cout << "\tpop %rdx    \t# The value to be displayed"<<endl;
+		cout << "\tmovq $TrueString, %rsi   \t # \"TRUE\n\""<<endl;
 		cout << "\tcmpq $0, %rdx"<<endl;
-		cout << "\tje False"<<TagNumber1<<endl;
-		cout << "\tmovq $TrueString, %rsi\t# \"TRUE\\n\""<<endl;
-		cout << "\tjmp Next"<<TagNumber1<<endl;
-		cout << "False"<<TagNumber1<<":"<<endl;
-		cout << "\tmovq $FalseString, %rsi\t# \"FALSE\\n\""<<endl;
-		cout << "Next"<<TagNumber1<<":"<<endl;
-	} else
-		Error("DISPLAY ne fonctionne que pour les nombres entiers");
-	cout << "\tmovl	$1, %edi"<<endl;
-	cout << "\tmovl	$0, %eax"<<endl;
-	cout << "\tcall	__printf_chk@PLT"<<endl;
-
+		cout << "\tje FALSE"<<TagNumber1<<endl;
+		cout << "\tmovq $FalseString, %rsi    \t# \"FALSE\n\""<<endl;
+		cout << "FALSE"<<TagNumber1<<":"<<endl;
+	} else {
+		Error("Entier ou booléen attendu");
+	}
+	cout << "\tmovq $0, %rax    \t# No floating point arguments"<<endl;
+	cout << "\tmovq $0, %rdi    \t# No floating point arguments"<<endl;
+	cout << "\tcall printf   \t # Display the value"<<endl;
+	cout << ".cfi_endproc"<<endl;
 }
 
 // IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]

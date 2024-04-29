@@ -141,35 +141,32 @@ FINWHILE6:
 	incq d
 	jmp TESTFOR5
 FINFOR5:
-	push b
-	pop %rdx	# Zero : False, non-zero : true
-	cmpq $0, %rdx
-	je False8
-	movq $TrueString, %rsi	# "TRUE\n"
-	jmp Next8
-False8:
-	movq $FalseString, %rsi	# "FALSE\n"
-Next8:
-	movl	$1, %edi
-	movl	$0, %eax
-	call	__printf_chk@PLT
 	push a
-	pop %rdx	# The value to be displayed
-	movq $FormatString1, %rsi	# "%llu\n"
-	movl	$1, %edi
-	movl	$0, %eax
-	call	__printf_chk@PLT
+.cfi_startproc
+	endbr64
+	pop %rdx    	# The value to be displayed
+	movq $FormatString1, %rsi   	# "%llu\n"
+	movq $0, %rax    	# No floating point arguments
+	movq $0, %rdi    	# No floating point arguments
+	call printf   	 # Display the value
+.cfi_endproc
 	push c
-	pop %rdx	# The value to be displayed
-	movq $FormatString1, %rsi	# "%llu\n"
-	movl	$1, %edi
-	movl	$0, %eax
-	call	__printf_chk@PLT
+.cfi_startproc
+	endbr64
+	pop %rdx    	# The value to be displayed
+	movq $FormatString1, %rsi   	# "%llu\n"
+	movq $0, %rax    	# No floating point arguments
+	movq $0, %rdi    	# No floating point arguments
+	call printf   	 # Display the value
+.cfi_endproc
 	push d
-	pop %rdx	# The value to be displayed
-	movq $FormatString1, %rsi	# "%llu\n"
-	movl	$1, %edi
-	movl	$0, %eax
-	call	__printf_chk@PLT
+.cfi_startproc
+	endbr64
+	pop %rdx    	# The value to be displayed
+	movq $FormatString1, %rsi   	# "%llu\n"
+	movq $0, %rax    	# No floating point arguments
+	movq $0, %rdi    	# No floating point arguments
+	call printf   	 # Display the value
+.cfi_endproc
 	movq %rbp, %rsp		# Restore the position of the stack's top
 	ret			# Return from main function

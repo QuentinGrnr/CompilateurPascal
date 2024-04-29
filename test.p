@@ -10,7 +10,6 @@ FOR d:=1 TO 2 DO
     WHILE a<2 DO 
         BEGIN a:=a+1;c:=c+1 END 
     END;
-DISPLAY b;
 DISPLAY a;
 DISPLAY c;
 DISPLAY d.
