@@ -1,10 +1,13 @@
 			# This code was produced by the CERI Compiler
-	.data
-	.align 8
-a:	.quad 0
+.data
+FormatString1:	.string "%llu\n"	# used by printf to display 64-bit unsigned integers
+TrueString:	.string "TRUE\n"	# used by printf to display the boolean value TRUE
+FalseString:	.string "FALSE\n"	# used by printf to display the boolean value FALSE
 b:	.quad 0
-c:	.quad 0
 z:	.quad 0
+a:	.quad 0
+c:	.quad 0
+d:	.quad 0
 	.text		# The following lines contain the program
 	.globl main	# The main function must be visible from outside
 main:			# The main function body :
@@ -75,21 +78,21 @@ Suite3:
 	je ELSE4
 	push $1
 	pop a
-	push $2
-	pop b
+	push $3
+	pop c
 	jmp FINIF4
 ELSE4:
 	push $3
 	pop a
 	push $4
-	pop b
+	pop c
 FINIF4:
 	push $1
-	pop c
+	pop d
 TESTFOR5:
 	push $2
 	pop %rax
-	cmpq c, %rax
+	cmpq d, %rax
 	jb FINFOR5
 	push a
 	push $1
@@ -98,13 +101,13 @@ TESTFOR5:
 	addq	%rbx, %rax	# ADD
 	push %rax
 	pop a
-	push b
+	push c
 	push $1
 	pop %rbx
 	pop %rax
 	addq	%rbx, %rax	# ADD
 	push %rax
-	pop b
+	pop c
 TESTWHILE6:
 	push a
 	push $2
@@ -126,17 +129,47 @@ Suite7:
 	addq	%rbx, %rax	# ADD
 	push %rax
 	pop a
-	push b
+	push c
 	push $1
 	pop %rbx
 	pop %rax
 	addq	%rbx, %rax	# ADD
 	push %rax
-	pop b
+	pop c
 	jmp TESTWHILE6
 FINWHILE6:
-	incq c
+	incq d
 	jmp TESTFOR5
 FINFOR5:
+	push b
+	pop %rdx	# Zero : False, non-zero : true
+	cmpq $0, %rdx
+	je False8
+	movq $TrueString, %rsi	# "TRUE\n"
+	jmp Next8
+False8:
+	movq $FalseString, %rsi	# "FALSE\n"
+Next8:
+	movl	$1, %edi
+	movl	$0, %eax
+	call	__printf_chk@PLT
+	push a
+	pop %rdx	# The value to be displayed
+	movq $FormatString1, %rsi	# "%llu\n"
+	movl	$1, %edi
+	movl	$0, %eax
+	call	__printf_chk@PLT
+	push c
+	pop %rdx	# The value to be displayed
+	movq $FormatString1, %rsi	# "%llu\n"
+	movl	$1, %edi
+	movl	$0, %eax
+	call	__printf_chk@PLT
+	push d
+	pop %rdx	# The value to be displayed
+	movq $FormatString1, %rsi	# "%llu\n"
+	movl	$1, %edi
+	movl	$0, %eax
+	call	__printf_chk@PLT
 	movq %rbp, %rsp		# Restore the position of the stack's top
 	ret			# Return from main function

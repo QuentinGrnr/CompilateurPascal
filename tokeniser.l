@@ -24,7 +24,7 @@ ws      [ \t\n\r]+
 alpha   [A-Za-z]
 digit   [0-9]
 number  {digit}+ 
-keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"FOR"|"DO"|"To"|"BEGIN"|"END")
+keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"FOR"|"DO"|"To"|"BEGIN"|"END"|"VAR"|"INTEGER"|"BOOLEAN"|"DISPLAY")
 id	{alpha}({alpha}|{digit})*
 addop	(\+|\-|\|\|) 
 mulop	(\*|\/|%|\&\&) 
@@ -45,7 +45,8 @@ unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.]+
 ","		return COMMA;
 ";"		return SEMICOLON;
 "."		return DOT;
-":="		return ASSIGN;
+":"		return COLON;
+":="	return ASSIGN;
 "("		return RPARENT;
 ")"		return LPARENT;
 "!"		return NOT;
