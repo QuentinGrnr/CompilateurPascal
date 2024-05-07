@@ -29,7 +29,7 @@
 
 using namespace std;
 
-enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY};
+enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY, DOWNTO};
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
@@ -388,6 +388,8 @@ KEYWORDS GetKeyword(void){
 		kw=VAR;
 	else if (strcmp(lexer->YYText(),"DISPLAY")==0)
 		kw=DISPLAY;
+	else if (strcmp(lexer->YYText(),"DOWNTO")==0)
+		kw=DOWNTO;
 	else 
 		kw=IF;
 	return kw;
@@ -414,29 +416,27 @@ string AssignementStatement(void){
 
 // DisplayStatement := "DISPLAY" Expression
 void DisplayStatement(void){
+	unsigned long TagNumber1 = ++TagNumber;
 	enum TYPES type;
-	unsigned long long TagNumber1=++TagNumber;
 	current=(TOKEN) lexer->yylex();
 	type = Expression();
-	cout << ".cfi_startproc"<<endl;
-	cout << "\tendbr64"<<endl;
+	cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 	if (type == INTEGER){
-		cout << "\tpop %rdx    \t# The value to be displayed"<<endl;
-		cout << "\tmovq $FormatString1, %rsi   \t# \"%llu\\n\""<<endl;
+		cout << "\tmovq $FormatString1, %rdi   \t# \"%llu\\n\""<<endl; // 
 	} else if (type == BOOLEAN){
-		cout << "\tpop %rdx    \t# The value to be displayed"<<endl;
-		cout << "\tmovq $TrueString, %rsi   \t # \"TRUE\n\""<<endl;
-		cout << "\tcmpq $0, %rdx"<<endl;
-		cout << "\tje FALSE"<<TagNumber1<<endl;
-		cout << "\tmovq $FalseString, %rsi    \t# \"FALSE\n\""<<endl;
-		cout << "FALSE"<<TagNumber1<<":"<<endl;
+		cout << "\tcmpq $0, %rsi   \t# Compare with 0"<<endl;
+		cout << "\tjne displayVrai"<<TagNumber1<<"\t# If not equal to 0"<<endl;
+		cout << "\tmovq $FalseString, %rdi   \t# \"FALSE\\n\""<<endl;
+		cout << "\tjmp Suite"<<TagNumber1<<endl;
+		cout << "displayVrai"<<TagNumber1<<":\tmovq $TrueString, %rdi   \t# \"TRUE\\n\""<<endl;
+		cout << "Suite"<<TagNumber1<<":"<<endl;
 	} else {
 		Error("Entier ou booléen attendu");
 	}
-	cout << "\tmovq $0, %rax    \t# No floating point arguments"<<endl;
-	cout << "\tmovq $0, %rdi    \t# No floating point arguments"<<endl;
-	cout << "\tcall printf   \t # Display the value"<<endl;
-	cout << ".cfi_endproc"<<endl;
+	cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
+	// on verifie que le prochain token est bien un point
+	cout << "\tcall printf@PLT   \t # Display the value"<<endl;
+
 }
 
 // IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]
@@ -486,25 +486,28 @@ void WhileStatement(void){
 void ForStatement(void){
 	string varboucle;
 	unsigned int TagNumber1=++TagNumber;
-	if(current!=KEYWORD && GetKeyword()!=FOR)
-		Error("Mot clé 'FOR' attendu");
 	current=(TOKEN) lexer->yylex();
 	varboucle=AssignementStatement();
-	if(current!=KEYWORD && GetKeyword()!=TO)
-		Error("Mot clé 'TO' attendu");
-	current=(TOKEN) lexer->yylex();
-	cout << "TESTFOR"<<TagNumber1<<":"<<endl;
-	Expression();
-	cout << "\tpop %rax"<<endl;
-	cout << "\tcmpq "<<varboucle<<", %rax"<<endl;
-	cout << "\tjb FINFOR"<<TagNumber1<<endl;
-	if(current!=KEYWORD && GetKeyword()!=DO)
-		Error("Mot clé 'DO' attendu");
-	current=(TOKEN) lexer->yylex();
-	Statement();
-	cout << "\tincq "<<varboucle<<endl;
-	cout << "\tjmp TESTFOR"<<TagNumber1<<endl;
-	cout << "FINFOR"<<TagNumber1<<":"<<endl;
+	if(GetKeyword()==TO || GetKeyword()==DOWNTO) {
+		current=(TOKEN) lexer->yylex();
+		cout << "TESTFOR"<<TagNumber1<<":"<<endl;
+		Expression();
+		cout << "\tpop %rax"<<endl; // get the value of the expression
+		cout << "\tcmpq "<<varboucle<<", %rax"<<endl;  // si varboucle > expression ou varboucle < expression
+		if(GetKeyword()==TO)
+			cout << "\tja FINFOR"<<TagNumber1<<endl;
+		else if (GetKeyword()==DOWNTO)
+			cout << "\tjb FINFOR"<<TagNumber1<<endl;
+		if(current!=KEYWORD && GetKeyword()!=DO)
+			Error("Mot clé 'DO' attendu");
+		current=(TOKEN) lexer->yylex();
+		Statement();
+		cout << "\tincq "<<varboucle<<endl; // ATTENTION il faut décrémenter
+		cout << "\tjmp TESTFOR"<<TagNumber1<<endl;
+		cout << "FINFOR"<<TagNumber1<<":"<<endl;
+	} else {
+		Error("Mot clé 'TO' ou 'DOWNTO' attendu");
+	}
 }
 
 // BlockStatement := "BEGIN" Statement { ";" Statement } "END"
@@ -560,7 +563,9 @@ void StatementPart(void){
 	cout << "\t.text\t\t# The following lines contain the program"<<endl;
 	cout << "\t.globl main\t# The main function must be visible from outside"<<endl;
 	cout << "main:\t\t\t# The main function body :"<<endl;
-	cout << "\tmovq %rsp, %rbp\t# Save the position of the stack's top"<<endl;
+	cout << ".cfi_startproc"<<endl;
+	cout << "endbr64"<<endl;
+	cout << "\tpushq %rbp \t# Save the position of the stack's top"<<endl;
 	Statement();
 	while(current==SEMICOLON){
 		current=(TOKEN) lexer->yylex();
@@ -589,8 +594,10 @@ int main(void){	// First version : Source code on standard input and assembly co
 	current=(TOKEN) lexer->yylex();
 	Program();
 	// Trailer for the gcc assembler / linker
-	cout << "\tmovq %rbp, %rsp\t\t# Restore the position of the stack's top"<<endl;
+	cout << "\tpopq %rbp\t\t# Restore the position of the stack's top"<<endl;
 	cout << "\tret\t\t\t# Return from main function"<<endl;
+	cout << ".cfi_endproc"<<endl;
+
 	if(current!=FEOF){
 		cerr <<"Caractères en trop à la fin du programme : ["<<current<<"]";
 		Error("."); // unexpected characters at the end of program

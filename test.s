@@ -11,7 +11,9 @@ d:	.quad 0
 	.text		# The following lines contain the program
 	.globl main	# The main function must be visible from outside
 main:			# The main function body :
-	movq %rsp, %rbp	# Save the position of the stack's top
+.cfi_startproc
+endbr64
+	pushq %rbp 	# Save the position of the stack's top
 	push $8
 	push $3
 	pop %rax
@@ -87,13 +89,6 @@ ELSE4:
 	push $4
 	pop c
 FINIF4:
-	push $1
-	pop d
-TESTFOR5:
-	push $2
-	pop %rax
-	cmpq d, %rax
-	jb FINFOR5
 	push a
 	push $1
 	pop %rbx
@@ -108,20 +103,20 @@ TESTFOR5:
 	addq	%rbx, %rax	# ADD
 	push %rax
 	pop c
-TESTWHILE6:
+TESTWHILE5:
 	push a
 	push $2
 	pop %rax
 	pop %rbx
 	cmpq %rax, %rbx
-	jb Vrai7	# If below
+	jb Vrai6	# If below
 	push $0		# False
-	jmp Suite7
-Vrai7:	push $0xFFFFFFFFFFFFFFFF		# True
-Suite7:
+	jmp Suite6
+Vrai6:	push $0xFFFFFFFFFFFFFFFF		# True
+Suite6:
 	pop %rax
 	cmpq $0, %rax
-	je FINWHILE6
+	je FINWHILE5
 	push a
 	push $1
 	pop %rbx
@@ -136,37 +131,23 @@ Suite7:
 	addq	%rbx, %rax	# ADD
 	push %rax
 	pop c
-	jmp TESTWHILE6
-FINWHILE6:
-	incq d
-	jmp TESTFOR5
-FINFOR5:
+	jmp TESTWHILE5
+FINWHILE5:
 	push a
-.cfi_startproc
-	endbr64
-	pop %rdx    	# The value to be displayed
-	movq $FormatString1, %rsi   	# "%llu\n"
-	movq $0, %rax    	# No floating point arguments
-	movq $0, %rdi    	# No floating point arguments
-	call printf   	 # Display the value
-.cfi_endproc
+	pop %rsi   	# The value to be displayed
+	movq $FormatString1, %rdi   	# "%llu\n"
+	xorl	%eax, %eax    	# No floating point arguments
+	call printf@PLT   	 # Display the value
 	push c
-.cfi_startproc
-	endbr64
-	pop %rdx    	# The value to be displayed
-	movq $FormatString1, %rsi   	# "%llu\n"
-	movq $0, %rax    	# No floating point arguments
-	movq $0, %rdi    	# No floating point arguments
-	call printf   	 # Display the value
-.cfi_endproc
+	pop %rsi   	# The value to be displayed
+	movq $FormatString1, %rdi   	# "%llu\n"
+	xorl	%eax, %eax    	# No floating point arguments
+	call printf@PLT   	 # Display the value
 	push d
-.cfi_startproc
-	endbr64
-	pop %rdx    	# The value to be displayed
-	movq $FormatString1, %rsi   	# "%llu\n"
-	movq $0, %rax    	# No floating point arguments
-	movq $0, %rdi    	# No floating point arguments
-	call printf   	 # Display the value
-.cfi_endproc
-	movq %rbp, %rsp		# Restore the position of the stack's top
+	pop %rsi   	# The value to be displayed
+	movq $FormatString1, %rdi   	# "%llu\n"
+	xorl	%eax, %eax    	# No floating point arguments
+	call printf@PLT   	 # Display the value
+	popq %rbp		# Restore the position of the stack's top
 	ret			# Return from main function
+.cfi_endproc

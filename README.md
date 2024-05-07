@@ -1,5 +1,12 @@
 # CERIcompiler
 
+### Ajout personnels
+**__- Display : modification du display pour qu'il fonctionne sur mon système__**
+J'ai du annalyser le fonctionnement du printf en assembleur sur mon systeme pour comprendre pourquoi le code assembleur donné ne fonctionnait pas sur mon système.
+
+### Afaire
+- add KEYWORDS true/false pour assinementStatement
+
 A simple compiler.
 From : Pascal-like imperative LL(k) langage
 To : 64 bit 80x86 assembly langage (AT&T)
