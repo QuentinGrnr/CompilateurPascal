@@ -19,12 +19,14 @@ using namespace std;
 %option c++
 %option yylineno
 
-stringconst  \"[^\n"]+\"
+charconst	\'\\?.\'
 ws      [ \t\n\r]+ 
 alpha   [A-Za-z]
 digit   [0-9]
-number  {digit}+ 
-keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"FOR"|"DO"|"To"|"BEGIN"|"END"|"VAR"|"INTEGER"|"BOOLEAN"|"DISPLAY"|"DOWNTO")
+number  {digit}+(\.{digit}+)?
+character    (\'[^']\')  
+boolVal ("TRUE"|"FALSE")
+keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"FOR"|"DO"|"TO"|"BEGIN"|"END"|"VAR"|"INTEGER"|"BOOLEAN"|"DISPLAY"|"DOWNTO"|"DOUBLE"|"CHAR"|"TRUE"|"FALSE")
 id	{alpha}({alpha}|{digit})*
 addop	(\+|\-|\|\|) 
 mulop	(\*|\/|%|\&\&) 
@@ -39,7 +41,7 @@ unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.]+
 {number}	return NUMBER;
 {keyword}	return KEYWORD;
 {id}		return ID;
-{stringconst}	return STRINGCONST;
+{charconst}	return CHARCONST;
 "["		return RBRACKET;
 "]"		return LBRACKET;
 ","		return COMMA;

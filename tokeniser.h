@@ -1,6 +1,6 @@
 // tokeniser.h : shared definition for tokeniser.l and compilateur.cpp
 
-enum TOKEN {FEOF, UNKNOWN, NUMBER, KEYWORD, ID, STRINGCONST, RBRACKET, LBRACKET, RPARENT, LPARENT, COMMA, 
+enum TOKEN {FEOF, UNKNOWN, NUMBER, CHARCONST, KEYWORD, ID, STRINGCONST, RBRACKET, LBRACKET, RPARENT, LPARENT, COMMA, 
 SEMICOLON, COLON, DOT, ADDOP, MULOP, RELOP, NOT, ASSIGN};
 
 ////////////////////////// Notes //////////////////////////

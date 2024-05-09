@@ -3,9 +3,13 @@
 ### Ajout personnels
 **__- Display : modification du display pour qu'il fonctionne sur mon système__**
 J'ai du annalyser le fonctionnement du printf en assembleur sur mon systeme pour comprendre pourquoi le code assembleur donné ne fonctionnait pas sur mon système.
+**__- Ajout de la fonction getType : permet de récupérer le type d'une variable__**
+Cette fonction permet de récupérer le type d'une variable en fonction de son nom. Elle est utilisée pour vérifier que les types des variables sont compatibles lors d'une assignation.
+**__- Ajout des KEYWORDS "TRUE" et "FALSE" : permet de définir la valeur booléenne__**
 
 ### Afaire
-- add KEYWORDS true/false pour assinementStatement
+- implementer NOT
+- modif reconnaissance true/false dans factor()
 
 A simple compiler.
 From : Pascal-like imperative LL(k) langage

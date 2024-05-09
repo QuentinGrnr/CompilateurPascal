@@ -26,14 +26,15 @@
 #include <FlexLexer.h>
 #include "tokeniser.h"
 #include <cstring>
+#include <string>
 
 using namespace std;
 
-enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY, DOWNTO};
+enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY, DOWNTO,TRUE, FALSE};
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
-enum TYPES {INTEGER, BOOLEAN};
+enum TYPES {INTEGER, BOOLEAN, DOUBLE, CHAR};
 
 TOKEN current;				// Current token
 
@@ -85,6 +86,7 @@ void Error(string s){
 enum TYPES Expression(void);
 void Statement(void);
 void StatementPart(void);
+KEYWORDS getKeyword(void);
 		
 TYPES Identifier(void){
 	enum TYPES type;
@@ -99,12 +101,26 @@ TYPES Identifier(void){
 }
 
 TYPES Number(void){
-	enum TYPES type;
+	double floatNumber=0;
+	unsigned int *p;
+	string nbr = lexer->YYText();
 	if (current!=NUMBER)
 		Error("Chiffre attendu");
-	cout <<"\tpush $"<<atoi(lexer->YYText())<<endl; // YYText =/ readchar car on accede a la valeur du token sans avancer le curseur
-	current=(TOKEN) lexer->yylex(); // YYlex envoie le type du token actuel et avance le curseur
-	return INTEGER;
+	// on vérifie que ce n'est pas un float
+	if (nbr.find(".") != string::npos){
+		floatNumber = atof(nbr.c_str());
+		p = (unsigned int *) &floatNumber;
+		cout << "\tsubq $8, %rsp"<<endl;
+		cout << "\tmovl $"<<*p<<", (%rsp)"<<endl;
+		cout << "\tmovl $"<<*(p+1)<<", 4(%rsp)"<<endl;
+		current=(TOKEN) lexer->yylex();
+		return DOUBLE;
+	} else {
+		cout <<"\tpush $"<<atoi(lexer->YYText())<<endl; // YYText =/ readchar car on accede a la valeur du token sans avancer le curseur
+		current=(TOKEN) lexer->yylex(); // YYlex envoie le type du token actuel et avance le curseur
+		return INTEGER;
+	}
+
 }
 
 TYPES Factor(void){
@@ -116,16 +132,20 @@ TYPES Factor(void){
 			Error("')' était attendu");		// ")" expected
 		else
 			current=(TOKEN) lexer->yylex();
-	} else {
-		if (current==NUMBER){
-			type = Number();
-		}else{
-			if(current==ID)
-				type = Identifier();
-			else
-				Error("'(', chiffre ou lettre attendue");
-		}
-	}
+	} else if (current==NUMBER){
+		type = Number();
+	} else if(current==ID) {
+		type = Identifier();
+	}else if (getKeyword()==TRUE){ // a modif 
+		cout << "\tpush $0xFFFFFFFFFFFFFFFF"<<endl;
+		current=(TOKEN) lexer->yylex();
+		type = BOOLEAN;
+	}else if (getKeyword()==FALSE){
+		cout << "\tpush $0"<<endl;
+		current=(TOKEN) lexer->yylex();
+		type = BOOLEAN;
+	} else 
+		Error("'(', chiffre ou lettre attendue");
 	return type;
 }
 
@@ -206,7 +226,7 @@ OPADD AdditiveOperator(void){
 	return opadd;
 }
 
-// SimpleExpression := Term {AdditiveOperator Term}
+// Expression:= Term {AdditiveOperator Term}
 TYPES SimpleExpression(void){
 	enum TYPES typeA, typeB;
 	OPADD adop;
@@ -215,7 +235,7 @@ TYPES SimpleExpression(void){
 		adop=AdditiveOperator();		// Save operator in local variable
 		typeB = Term();
 		if (typeA!=typeB)
-			Error("Memes types attendus"); // same type expected
+			Error("assignation de meme type attendue"); // same type expected
 		cout << "\tpop %rbx"<<endl;	// get first operand
 		cout << "\tpop %rax"<<endl;	// get second operand
 		switch(adop){
@@ -252,8 +272,14 @@ TYPES Type(void){
 	else if(strcmp(lexer->YYText(),"BOOLEAN")==0) {
 		current=(TOKEN) lexer->yylex();
 		return BOOLEAN;
-	} else
-		Error("Type attendu");
+	} else if (strcmp(lexer->YYText(),"DOUBLE")==0) {
+		current=(TOKEN) lexer->yylex();
+		return DOUBLE;
+	} else if (strcmp(lexer->YYText(),"CHAR")==0) {
+		current=(TOKEN) lexer->yylex();
+		return CHAR;
+	}
+	Error("Type attendu");
 	return INTEGER; // to avoid a warning, this line is never reached
 }
 
@@ -281,8 +307,21 @@ void VarDeclaration(void){
 	for(set<string>::iterator it=idents.begin(); it!=idents.end(); it++){
 		if(DeclaredVariables.find(*it)!=DeclaredVariables.end())
 			Error("Identificateur déjà déclaré");
+		switch(type){
+			case BOOLEAN:
+			case INTEGER:
+				cout << *it << ":\t.quad 0"<<endl;
+				break;
+			case DOUBLE:
+				cout << *it << ":\t.double 0.0"<<endl;
+				break;
+			case CHAR:
+				cout << *it << ":\t.byte 0"<<endl;
+				break;
+			default:
+				Error("Type inconnu");
+		}
 		DeclaredVariables[*it]=type;
-		cout << *it << ":\t.quad 0"<<endl;
 	}
 }
 
@@ -324,10 +363,10 @@ OPREL RelationalOperator(void){
 TYPES Expression(void){
 	enum TYPES typeA, typeB;
 	OPREL oprel;
-	typeA = SimpleExpression();
+	typeA=SimpleExpression();
 	if(current==RELOP){
 		oprel=RelationalOperator();
-		typeB = SimpleExpression();
+		typeB=SimpleExpression();
 		if (typeA!=typeB)
 			Error("Memes types attendus"); // same type expected
 		cout << "\tpop %rax"<<endl;
@@ -355,7 +394,7 @@ TYPES Expression(void){
 			default:
 				Error("Opérateur de comparaison inconnu");
 		}
-		cout << "\tpush $0\t\t# False"<<endl;
+		cout << "\tpush $0\t\t# False"<<endl; 
 		cout << "\tjmp Suite"<<TagNumber<<endl;
 		cout << "Vrai"<<TagNumber<<":\tpush $0xFFFFFFFFFFFFFFFF\t\t# True"<<endl;	
 		cout << "Suite"<<TagNumber<<":"<<endl;
@@ -364,7 +403,7 @@ TYPES Expression(void){
 	return typeA;
 }
 
-KEYWORDS GetKeyword(void){
+KEYWORDS getKeyword(void){
 	KEYWORDS kw;
 	if(strcmp(lexer->YYText(),"IF")==0)
 		kw=IF;
@@ -390,28 +429,42 @@ KEYWORDS GetKeyword(void){
 		kw=DISPLAY;
 	else if (strcmp(lexer->YYText(),"DOWNTO")==0)
 		kw=DOWNTO;
-	else 
+	else if (strcmp(lexer->YYText(),"TRUE")==0)
+		kw=TRUE;
+	else if (strcmp(lexer->YYText(),"FALSE")==0)
+		kw=FALSE;
+	else
 		kw=IF;
 	return kw;
 }
 
+TYPES getType (string variable){
+	if (IsDeclared(variable.c_str()))
+		return DeclaredVariables[variable];
+	else
+		Error("Variable non déclarée");
+	return INTEGER;
+}
+
 // AssignementStatement := Identifier ":=" Expression
 string AssignementStatement(void){
+	enum TYPES type1, type2;
 	string variable;
 	if(current!=ID)
 		Error("Identificateur attendu");
-	if(!IsDeclared(lexer->YYText())){
-		cerr << "Erreur : Variable '"<<lexer->YYText()<<"' non déclarée"<<endl;
-		exit(-1);
-	}
+	if (!IsDeclared(lexer->YYText()))
+		Error("Variable non déclarée");
 	variable=lexer->YYText();
 	current=(TOKEN) lexer->yylex();
+	type1=DeclaredVariables[variable];
 	if(current!=ASSIGN)
-		Error("caractères ':=' attendus");
+		Error("':=' attendu");
 	current=(TOKEN) lexer->yylex();
-	Expression();
+	type2=Expression();
+	if (type1!=type2)
+		Error("Memes types attendus");
 	cout << "\tpop "<<variable<<endl;
-	return variable;
+	return variable;	
 }
 
 // DisplayStatement := "DISPLAY" Expression
@@ -422,19 +475,22 @@ void DisplayStatement(void){
 	type = Expression();
 	cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 	if (type == INTEGER){
-		cout << "\tmovq $FormatString1, %rdi   \t# \"%llu\\n\""<<endl; // 
+		cout << "\tmovq $FormatStringInt, %rdi   \t# \"%llu\\n\""<<endl; 
 	} else if (type == BOOLEAN){
 		cout << "\tcmpq $0, %rsi   \t# Compare with 0"<<endl;
 		cout << "\tjne displayVrai"<<TagNumber1<<"\t# If not equal to 0"<<endl;
-		cout << "\tmovq $FalseString, %rdi   \t# \"FALSE\\n\""<<endl;
+		cout << "\tmovq $FormatStringFalse, %rdi   \t# \"FALSE\\n\""<<endl;
 		cout << "\tjmp Suite"<<TagNumber1<<endl;
-		cout << "displayVrai"<<TagNumber1<<":\tmovq $TrueString, %rdi   \t# \"TRUE\\n\""<<endl;
+		cout << "displayVrai"<<TagNumber1<<":\tmovq $FormatStringTrue, %rdi   \t# \"TRUE\\n\""<<endl;
 		cout << "Suite"<<TagNumber1<<":"<<endl;
+	} else if (type == DOUBLE){
+		cout << "\tmovq $FormatStringDouble, %rdi   \t# \"%f\\n\""<<endl; 
+	} else if (type == CHAR){
+		cout << "\tmovq $FormatStringChar, %rdi   \t# \"%c\\n\""<<endl; 
 	} else {
 		Error("Entier ou booléen attendu");
 	}
 	cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
-	// on verifie que le prochain token est bien un point
 	cout << "\tcall printf@PLT   \t # Display the value"<<endl;
 
 }
@@ -442,21 +498,20 @@ void DisplayStatement(void){
 // IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]
 void IfStatement(void){
 	unsigned long TagNumber1 = ++TagNumber;
-	
-	if(current!=KEYWORD && GetKeyword()!=IF)
+	if(current!=KEYWORD && getKeyword()!=IF)
 		Error("Mot clé 'IF' attendu");
 	current=(TOKEN) lexer->yylex();
 	Expression();
 	cout << "\tpop %rax"<<endl;
 	cout << "\tcmpq $0, %rax"<<endl; // compare with 0 to know if the expression is false
 	cout << "\tje ELSE"<<TagNumber1<<endl; // if false, jump to the else statement
-	if(current!=KEYWORD && GetKeyword()!=THEN)
+	if(current!=KEYWORD && getKeyword()!=THEN)
 		Error("Mot clé 'THEN' attendu");
 	current=(TOKEN) lexer->yylex();
 	Statement();
 	cout << "\tjmp FINIF"<<TagNumber1<<endl;
 	cout << "ELSE"<<TagNumber1<<":"<<endl;
-	if(current!=KEYWORD && GetKeyword()!=ELSE)
+	if(current!=KEYWORD && getKeyword()!=ELSE)
 		Error("Mot clé 'ELSE' attendu");
 	current=(TOKEN) lexer->yylex();
 	Statement();
@@ -466,7 +521,7 @@ void IfStatement(void){
 // WhileStatement := "WHILE" Expression "DO" Statement
 void WhileStatement(void){
 	unsigned long TagNumber1=++TagNumber;
-	if(current!=KEYWORD && GetKeyword()!=WHILE)
+	if(current!=KEYWORD && getKeyword()!=WHILE)
 		Error("Mot clé 'WHILE' attendu");
 	current=(TOKEN) lexer->yylex();
 	cout << "TESTWHILE"<<TagNumber1<<":"<<endl;
@@ -474,7 +529,7 @@ void WhileStatement(void){
 	cout << "\tpop %rax"<<endl;
 	cout << "\tcmpq $0, %rax"<<endl; // compare with 0 to know if the expression is false
 	cout << "\tje FINWHILE"<<TagNumber1<<endl; // if false, jump to the end of the while statement
-	if(current!=KEYWORD && GetKeyword()!=DO)
+	if(current!=KEYWORD && getKeyword()!=DO)
 		Error("Mot clé 'DO' attendu");
 	current=(TOKEN) lexer->yylex();
 	Statement();
@@ -482,37 +537,51 @@ void WhileStatement(void){
 	cout << "FINWHILE"<<TagNumber1<<":"<<endl;
 }
 
-// FORStatement := "FOR" AssignementStatement "TO" Expression "DO" Statement
+// FORStatement := "FOR" AssignementStatement ("TO"|"DOWNTO") Expression "DO" Statement
 void ForStatement(void){
-	string varboucle;
-	unsigned int TagNumber1=++TagNumber;
+	enum TYPES type1, type2;
+	bool to = false; // true if the keyword is TO, false if it is DOWNTO
+	unsigned long TagNumber1=++TagNumber;
+	string variable;
+	if(current!=KEYWORD && getKeyword()!=FOR)
+		Error("Mot clé 'FOR' attendu");
 	current=(TOKEN) lexer->yylex();
-	varboucle=AssignementStatement();
-	if(GetKeyword()==TO || GetKeyword()==DOWNTO) {
-		current=(TOKEN) lexer->yylex();
-		cout << "TESTFOR"<<TagNumber1<<":"<<endl;
-		Expression();
-		cout << "\tpop %rax"<<endl; // get the value of the expression
-		cout << "\tcmpq "<<varboucle<<", %rax"<<endl;  // si varboucle > expression ou varboucle < expression
-		if(GetKeyword()==TO)
-			cout << "\tja FINFOR"<<TagNumber1<<endl;
-		else if (GetKeyword()==DOWNTO)
-			cout << "\tjb FINFOR"<<TagNumber1<<endl;
-		if(current!=KEYWORD && GetKeyword()!=DO)
-			Error("Mot clé 'DO' attendu");
-		current=(TOKEN) lexer->yylex();
-		Statement();
-		cout << "\tincq "<<varboucle<<endl; // ATTENTION il faut décrémenter
-		cout << "\tjmp TESTFOR"<<TagNumber1<<endl;
-		cout << "FINFOR"<<TagNumber1<<":"<<endl;
-	} else {
-		Error("Mot clé 'TO' ou 'DOWNTO' attendu");
+	variable = AssignementStatement();
+	type1 = getType(variable);
+	if(current!=KEYWORD && getKeyword()!=TO && getKeyword()!=DOWNTO) {
+		Error("Mot clé 'TO' ou 'DOWNTO' attend");
+	} else if (getKeyword()==TO){
+		to = true;
 	}
+	current=(TOKEN) lexer->yylex();
+	cout << "DEBUTFOR"<<TagNumber1<<":"<<endl;
+	type2 = Expression();
+	if (type1!=type2 || type1!=INTEGER) // les variables de la boucle FOR doivent être des entiers
+		Error("Les paramètres de la boucle FOR doivent être des entiers");
+	cout << "\tpop %rbx #\t valeur de l'expression"<<endl;
+	cout << "\tcmpq %rbx, "<<variable<<endl;
+	if (to){
+		cout << "\tjae FINFOR"<<TagNumber1<<endl;
+	} else {
+		cout << "\tjbe FINFOR"<<TagNumber1<<endl; 
+	}
+	if(current!=KEYWORD && getKeyword()!=DO)
+		Error("Mot clé 'DO' attendu");
+	current=(TOKEN) lexer->yylex();
+	Statement();
+	if (to){
+		cout << "\tincq "<<variable<<endl; // increment the variable
+	} else {
+		cout << "\tdecq "<<variable<<endl; // decrement the variable
+	}
+	cout << "\tjmp DEBUTFOR"<<TagNumber1<<endl;
+
+	cout << "FINFOR"<<TagNumber1<<":"<<endl;
 }
 
 // BlockStatement := "BEGIN" Statement { ";" Statement } "END"
 void BlockStatement(void){
-	if(current!=KEYWORD && GetKeyword()!=BEGIN)
+	if(current!=KEYWORD && getKeyword()!=BEGIN)
 		Error("Mot clé 'BEGIN' attendu");
 	current=(TOKEN) lexer->yylex();
 	Statement();
@@ -520,7 +589,7 @@ void BlockStatement(void){
 		current=(TOKEN) lexer->yylex();
 		Statement();
 	}
-	if(current!=KEYWORD && GetKeyword()!=END)
+	if(current!=KEYWORD && getKeyword()!=END)
 		Error("Mot clé 'END' attendu");
 	current=(TOKEN) lexer->yylex();
 }
@@ -533,7 +602,7 @@ void Statement(void){
 			AssignementStatement();
 			break;
 		case KEYWORD:
-			switch(GetKeyword()){
+			switch(getKeyword()){
 				case IF:
 					IfStatement();
 					break;
@@ -578,7 +647,7 @@ void StatementPart(void){
 
 // Program := [VarDeclarationPart] StatementPart
 void Program(void){
-	if(current==KEYWORD && GetKeyword()==VAR)
+	if(current==KEYWORD && getKeyword()==VAR)
 		VarDeclarationPart();
 	StatementPart();
 }
@@ -587,9 +656,11 @@ int main(void){	// First version : Source code on standard input and assembly co
 	// Header for gcc assembler / linker
 	cout << "\t\t\t# This code was produced by the CERI Compiler"<<endl;
 	cout << ".data"<<endl;
-	cout << "FormatString1:\t.string \"%llu\\n\"\t# used by printf to display 64-bit unsigned integers"<<endl; 
-	cout << "TrueString:\t.string \"TRUE\\n\"\t# used by printf to display the boolean value TRUE"<<endl; 
-	cout << "FalseString:\t.string \"FALSE\\n\"\t# used by printf to display the boolean value FALSE"<<endl; 
+	cout << "FormatStringInt:\t.string \"%llu\\n\"\t# used by printf to display 64-bit unsigned integers"<<endl; 
+	cout << "FormatStringDouble:\t.string \"%f\\n\"\t# used by printf to display double precision floating point numbers"<<endl;
+	cout << "FormatStringChar:\t.string \"%c\\n\"\t# used by printf to display characters"<<endl;
+	cout << "FormatStringTrue:\t.string \"TRUE\\n\"\t# used by printf to display the boolean value TRUE"<<endl; 
+	cout << "FormatStringFalse:\t.string \"FALSE\\n\"\t# used by printf to display the boolean value FALSE"<<endl; 
 	// Let's proceed to the analysis and code production
 	current=(TOKEN) lexer->yylex();
 	Program();
@@ -602,11 +673,7 @@ int main(void){	// First version : Source code on standard input and assembly co
 		cerr <<"Caractères en trop à la fin du programme : ["<<current<<"]";
 		Error("."); // unexpected characters at the end of program
 	}
-
 }
-		
-			
-
 
 
 
