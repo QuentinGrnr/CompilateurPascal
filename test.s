@@ -22,18 +22,27 @@ endbr64
 	subq $8, %rsp 	 # allocate 8 bytes on stack's top
 	movl $1374389535, (%rsp) 	# Conversion of 3.14 (32 bit high part)
 	movl $1074339512, 4(%rsp) 	# Conversion of 3.14 (32 bit low part)
+	# Number : 1.0
+	subq $8, %rsp 	 # allocate 8 bytes on stack's top
+	movl $0, (%rsp) 	# Conversion of 1 (32 bit high part)
+	movl $1072693248, 4(%rsp) 	# Conversion of 1 (32 bit low part)
+	fldl	8(%rsp)	
+	fldl	(%rsp)	# first operand -> %st(0) ; second operand -> %st(1)
+	faddp	%st(0),%st(1)	# %st(0) <- op1 + op2 ; %st(1)=null
+	fstpl 8(%rsp)
+	addq $8, %rsp
 	pop f
 	push f
-	# Number : 3.14
+	# Number : 4.0
 	subq $8, %rsp 	 # allocate 8 bytes on stack's top
-	movl $1374389535, (%rsp) 	# Conversion of 3.14 (32 bit high part)
-	movl $1074339512, 4(%rsp) 	# Conversion of 3.14 (32 bit low part)
+	movl $0, (%rsp) 	# Conversion of 4 (32 bit high part)
+	movl $1074790400, 4(%rsp) 	# Conversion of 4 (32 bit low part)
 	fldl	(%rsp)	
 	fldl	8(%rsp)	# first operand -> %st(0) ; second operand -> %st(1)
 	 addq $16, %rsp	# 2x pop nothing
 	fcomip %st(1)		# compare op1 and op2 -> %RFLAGS and pop
 	faddp %st(1)	# pop nothing
-	jne Vrai1	# If different
+	ja Vrai1	# If above
 	push $0		# False
 	jmp Suite1
 Vrai1:	push $0xFFFFFFFFFFFFFFFF		# True

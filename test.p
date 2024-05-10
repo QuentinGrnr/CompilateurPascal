@@ -3,8 +3,8 @@ VAR
      a,c,d : INTEGER;
      f : DOUBLE;
      g : CHAR.
-f:=3.14;
-b:=(f!=3.14);
+f:=3.14+1.0;
+b:=f>4.0;
 DISPLAY f;
 DISPLAY b;
 DISPLAY a.

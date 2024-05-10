@@ -235,28 +235,42 @@ TYPES SimpleExpression(void){
 		typeB = Term();
 		if (typeA!=typeB)
 			Error("assignation de meme type attendue"); // same type expected
-		cout << "\tpop %rbx"<<endl;	// get first operand
-		cout << "\tpop %rax"<<endl;	// get second operand
+		if (typeA!=INTEGER && typeA!=BOOLEAN && typeA!=DOUBLE)
+			Error("Entier, booléen ou double attendu"); // same type expected
+		if (typeA==DOUBLE){
+			cout<<"\tfldl	8(%rsp)\t"<<endl;
+			cout<<"\tfldl	(%rsp)\t# first operand -> %st(0) ; second operand -> %st(1)"<<endl;
+		} else if (typeA == INTEGER || typeA == BOOLEAN) {
+			cout << "\tpop %rbx"<<endl;	// get first operand
+			cout << "\tpop %rax"<<endl;	// get second operand
+		}
 		switch(adop){
 			case OR:
 				if (typeA!=BOOLEAN)
 					Error("Booléens attendus"); // same type expected
-				cout << "\taddq	%rbx, %rax\t# OR"<<endl;// operand1 OR operand2
+					cout << "\taddq	%rbx, %rax\t# OR"<<endl;// operand1 OR operand2
+					cout << "\tpush %rax"<<endl;			// store result
 				break;			
 			case ADD:
-				if (typeA!=INTEGER)
-					Error("Entiers attendus"); // same type expected
-				cout << "\taddq	%rbx, %rax\t# ADD"<<endl;	// add both operands
+				if (typeA==INTEGER) {
+					cout << "\taddq	%rbx, %rax\t# ADD"<<endl;	// add both operands
+				} else if (typeA == DOUBLE) {
+					cout<<"\tfaddp	%st(0),%st(1)\t# %st(0) <- op1 + op2 ; %st(1)=null"<<endl;
+					cout<<"\tfstpl 8(%rsp)"<<endl; 
+					cout<<"\taddq $8, %rsp"<<endl;
+				} else {
+					Error("Entiers ou doubles attendus"); // same type expected
+				}
 				break;			
 			case SUB:
 				if (typeA!=INTEGER)
 					Error("Entiers attendus"); // same type expected	
 				cout << "\tsubq	%rbx, %rax\t# SUB"<<endl;	// substract both operands
+				cout << "\tpush %rax"<<endl;			// store result
 				break;
 			default:
 				Error("opérateur additif inconnu");
 		}
-		cout << "\tpush %rax"<<endl;			// store result
 	}
 	return typeA;
 }
