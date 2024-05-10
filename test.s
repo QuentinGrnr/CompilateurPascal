@@ -18,13 +18,18 @@ main:			# The main function body :
 .cfi_startproc
 endbr64
 	pushq %rbp 	# Save the position of the stack's top
-	subq $8, %rsp
-	movl $1374389535, (%rsp)
-	movl $1074339512, 4(%rsp)
+	# Number : 3.14
+	subq $8, %rsp 	 # allocate 8 bytes on stack's top
+	movl $1374389535, (%rsp) 	# Conversion of 3.14 (32 bit high part)
+	movl $1074339512, 4(%rsp) 	# Conversion of 3.14 (32 bit low part)
 	pop f
 	push f
-	pop %rsi   	# The value to be displayed
+	movsd	(%rsp), %xmm0   	# The value to be displayed
+	subq $16 , %rsp   	# Allocate 16 bytes on stack's top
+	movsd %xmm0, 8(%rsp)   	# Store the value on the stack
 	movq $FormatStringDouble, %rdi   	# "%f\n"
+nop   	# Align the stack's top on 16 bytes boundary
+	add $24, %rsp   	# pop nothing
 	xorl	%eax, %eax    	# No floating point arguments
 	call printf@PLT   	 # Display the value
 	popq %rbp		# Restore the position of the stack's top

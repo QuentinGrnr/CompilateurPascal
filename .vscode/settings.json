@@ -13,6 +13,7 @@
         "xutility": "cpp",
         "iostream": "cpp",
         "ostream": "cpp",
-        "cstring": "cpp"
+        "cstring": "cpp",
+        "system_error": "cpp"
     }
 }

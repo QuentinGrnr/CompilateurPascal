@@ -101,18 +101,18 @@ TYPES Identifier(void){
 }
 
 TYPES Number(void){
-	double floatNumber=0;
+	double floatNumber;
+	cout << "\t# Number : "<<lexer->YYText()<<endl;
 	unsigned int *p;
 	string nbr = lexer->YYText();
 	if (current!=NUMBER)
 		Error("Chiffre attendu");
-	// on vérifie que ce n'est pas un float
 	if (nbr.find(".") != string::npos){
-		floatNumber = atof(nbr.c_str());
-		p = (unsigned int *) &floatNumber;
-		cout << "\tsubq $8, %rsp"<<endl;
-		cout << "\tmovl $"<<*p<<", (%rsp)"<<endl;
-		cout << "\tmovl $"<<*(p+1)<<", 4(%rsp)"<<endl;
+		floatNumber = atof(lexer->YYText());
+		p = (unsigned int *) &floatNumber; 
+		cout << "\tsubq $8, %rsp \t # allocate 8 bytes on stack's top"<<endl;
+		cout << "\tmovl $"<<*p<<", (%rsp) \t# Conversion of "<<floatNumber<<" (32 bit high part)"<<endl;
+		cout << "\tmovl $"<<*(p+1)<<", 4(%rsp) \t# Conversion of "<<floatNumber<<" (32 bit low part)"<<endl;
 		current=(TOKEN) lexer->yylex();
 		return DOUBLE;
 	} else {
@@ -120,7 +120,6 @@ TYPES Number(void){
 		current=(TOKEN) lexer->yylex(); // YYlex envoie le type du token actuel et avance le curseur
 		return INTEGER;
 	}
-
 }
 
 TYPES Factor(void){
@@ -473,10 +472,11 @@ void DisplayStatement(void){
 	enum TYPES type;
 	current=(TOKEN) lexer->yylex();
 	type = Expression();
-	cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 	if (type == INTEGER){
+		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 		cout << "\tmovq $FormatStringInt, %rdi   \t# \"%llu\\n\""<<endl; 
 	} else if (type == BOOLEAN){
+		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 		cout << "\tcmpq $0, %rsi   \t# Compare with 0"<<endl;
 		cout << "\tjne displayVrai"<<TagNumber1<<"\t# If not equal to 0"<<endl;
 		cout << "\tmovq $FormatStringFalse, %rdi   \t# \"FALSE\\n\""<<endl;
@@ -484,7 +484,12 @@ void DisplayStatement(void){
 		cout << "displayVrai"<<TagNumber1<<":\tmovq $FormatStringTrue, %rdi   \t# \"TRUE\\n\""<<endl;
 		cout << "Suite"<<TagNumber1<<":"<<endl;
 	} else if (type == DOUBLE){
-		cout << "\tmovq $FormatStringDouble, %rdi   \t# \"%f\\n\""<<endl; 
+		cout << "\tmovsd	(%rsp), %xmm0   \t# The value to be displayed"<<endl;
+		cout << "\tsubq $16 , %rsp   \t# Allocate 16 bytes on stack's top"<<endl;
+		cout << "\tmovsd %xmm0, 8(%rsp)   \t# Store the value on the stack"<<endl;
+		cout << "\tmovq $FormatStringDouble, %rdi   \t# \"%f\\n\""<<endl;
+		cout << "nop   \t# Align the stack's top on 16 bytes boundary"<<endl;
+		cout << "\tadd $24, %rsp   \t# pop nothing"<<endl;
 	} else if (type == CHAR){
 		cout << "\tmovq $FormatStringChar, %rdi   \t# \"%c\\n\""<<endl; 
 	} else {
@@ -674,7 +679,3 @@ int main(void){	// First version : Source code on standard input and assembly co
 		Error("."); // unexpected characters at the end of program
 	}
 }
-
-
-
-
