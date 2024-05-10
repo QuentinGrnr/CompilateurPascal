@@ -368,9 +368,21 @@ TYPES Expression(void){
 		typeB=SimpleExpression();
 		if (typeA!=typeB)
 			Error("Memes types attendus"); // same type expected
-		cout << "\tpop %rax"<<endl;
-		cout << "\tpop %rbx"<<endl;
-		cout << "\tcmpq %rax, %rbx"<<endl;
+		if (typeA==INTEGER || typeA==BOOLEAN){
+			cout << "\tpop %rax"<<endl;
+			cout << "\tpop %rbx"<<endl;
+			cout << "\tcmpq %rax, %rbx"<<endl;
+		} else if (typeA==DOUBLE){
+			cout<<"\tfldl	(%rsp)\t"<<endl;
+			cout<<"\tfldl	8(%rsp)\t# first operand -> %st(0) ; second operand -> %st(1)"<<endl;
+			cout<<"\t addq $16, %rsp\t# 2x pop nothing"<<endl;
+			cout<<"\tfcomip %st(1)\t\t# compare op1 and op2 -> %RFLAGS and pop"<<endl;
+			cout<<"\tfaddp %st(1)\t# pop nothing"<<endl;
+		} else if (typeA==CHAR){
+			Error("char non supporté");
+		} else {
+			Error("Entier, booléen ou double attendu");
+		}
 		switch(oprel){
 			case EQU:
 				cout << "\tje Vrai"<<++TagNumber<<"\t# If equal"<<endl;
