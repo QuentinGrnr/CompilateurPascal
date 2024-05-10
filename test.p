@@ -4,4 +4,6 @@ VAR
      f : DOUBLE;
      g : CHAR.
 f:=3.14;
-DISPLAY f.
+DISPLAY f;
+DISPLAY b;
+DISPLAY a.

@@ -475,6 +475,8 @@ void DisplayStatement(void){
 	if (type == INTEGER){
 		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 		cout << "\tmovq $FormatStringInt, %rdi   \t# \"%llu\\n\""<<endl; 
+		cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
+		cout << "\tcall printf@PLT   \t # Display the value"<<endl;
 	} else if (type == BOOLEAN){
 		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 		cout << "\tcmpq $0, %rsi   \t# Compare with 0"<<endl;
@@ -483,20 +485,21 @@ void DisplayStatement(void){
 		cout << "\tjmp Suite"<<TagNumber1<<endl;
 		cout << "displayVrai"<<TagNumber1<<":\tmovq $FormatStringTrue, %rdi   \t# \"TRUE\\n\""<<endl;
 		cout << "Suite"<<TagNumber1<<":"<<endl;
+		cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
+		cout << "\tcall printf@PLT   \t # Display the value"<<endl;
 	} else if (type == DOUBLE){
-		cout << "\tmovsd	(%rsp), %xmm0   \t# The value to be displayed"<<endl;
+		cout << "\tmovsd	(%rsp), %xmm0   \t# L'adresse de la valeur dans le registre xmm0"<<endl;
 		cout << "\tsubq $16 , %rsp   \t# Allocate 16 bytes on stack's top"<<endl;
 		cout << "\tmovsd %xmm0, 8(%rsp)   \t# Store the value on the stack"<<endl;
 		cout << "\tmovq $FormatStringDouble, %rdi   \t# \"%f\\n\""<<endl;
-		cout << "nop   \t# Align the stack's top on 16 bytes boundary"<<endl;
-		cout << "\tadd $24, %rsp   \t# pop nothing"<<endl;
+ 		cout << "\tadd $24, %rsp   \t# pop nothing"<<endl;
+		cout << "\tcall printf@PLT   \t # Display the value"<<endl;
 	} else if (type == CHAR){
 		cout << "\tmovq $FormatStringChar, %rdi   \t# \"%c\\n\""<<endl; 
 	} else {
 		Error("Entier ou booléen attendu");
 	}
-	cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
-	cout << "\tcall printf@PLT   \t # Display the value"<<endl;
+
 
 }
 
