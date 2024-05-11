@@ -18,6 +18,15 @@ main:			# The main function body :
 .cfi_startproc
 endbr64
 	pushq %rbp 	# Save the position of the stack's top
+	# Number : 3
+	push $3
+	# Number : 1
+	push $1
+	pop %rbx
+	pop %rax
+	subq	%rbx, %rax	# SUB
+	push %rax
+	pop a
 	# Number : 3.14
 	subq $8, %rsp 	 # allocate 8 bytes on stack's top
 	movl $1374389535, (%rsp) 	# Conversion of 3.14 (32 bit high part)
@@ -26,11 +35,11 @@ endbr64
 	subq $8, %rsp 	 # allocate 8 bytes on stack's top
 	movl $0, (%rsp) 	# Conversion of 1 (32 bit high part)
 	movl $1072693248, 4(%rsp) 	# Conversion of 1 (32 bit low part)
-	fldl	8(%rsp)	
-	fldl	(%rsp)	# first operand -> %st(0) ; second operand -> %st(1)
-	faddp	%st(0),%st(1)	# %st(0) <- op1 + op2 ; %st(1)=null
+	fldl	(%rsp)	
+	fldl	8(%rsp)	# first operand -> %st(0) ; second operand -> %st(1)
+	fsubp	%st(0),%st(1)	# %st(0) <- op1 - op2 ; %st(1)=null
 	fstpl 8(%rsp)
-	addq $8, %rsp
+	addq	$8, %rsp	# result on stack's top
 	pop f
 	push f
 	# Number : 4.0
