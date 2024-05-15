@@ -24,7 +24,6 @@ ws      [ \t\n\r]+
 alpha   [A-Za-z]
 digit   [0-9]
 number  {digit}+(\.{digit}+)?
-character    (\'[^']\')  
 boolVal ("TRUE"|"FALSE")
 keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"FOR"|"DO"|"TO"|"BEGIN"|"END"|"VAR"|"INTEGER"|"BOOLEAN"|"DISPLAY"|"DOWNTO"|"DOUBLE"|"CHAR"|"TRUE"|"FALSE")
 id	{alpha}({alpha}|{digit})*

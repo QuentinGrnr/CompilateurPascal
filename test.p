@@ -1,11 +1,16 @@
 VAR 
+     g : CHAR;
      b,z   : BOOLEAN ; 
      a,c,d : INTEGER;
-     f : DOUBLE;
-     g : CHAR.
+     f : DOUBLE.
+g:='a';
 a:=3-1;
-f:=3.14-1.0;
-b:=f>4.0;
+f:=3.14/2.0;
+b:=4.10>89.0;
+z:=(b!=TRUE);
+DISPLAY g == 'p';
+DISPLAY g;
 DISPLAY f;
 DISPLAY b;
+DISPLAY z;
 DISPLAY a.

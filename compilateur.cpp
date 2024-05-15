@@ -40,7 +40,7 @@ TOKEN current;				// Current token
 
 FlexLexer* lexer = new yyFlexLexer; // This is the flex tokeniser
 // tokens can be read using lexer->yylex()
-// lexer->yylex() returns the type of the lexicon entry (see enum TOKEN in tokeniser.h)
+// lexer->yylex() returns the type of the lexicon entry (see enum TOKEN in tkeniser.h)
 // and lexer->YYText() returns the lexicon entry as a string
 
 map<string, enum TYPES> DeclaredVariables;	// Set of declared variables and their types	
@@ -116,7 +116,7 @@ TYPES Number(void){
 		current=(TOKEN) lexer->yylex();
 		return DOUBLE;
 	} else {
-		cout <<"\tpush $"<<atoi(lexer->YYText())<<endl; // YYText =/ readchar car on accede a la valeur du token sans avancer le curseur
+		cout <<"\tpush $"<<atoi(lexer->YYText())<<endl; // YYText =/ readCHAR car on accede a la valeur du token sans avancer le curseur
 		current=(TOKEN) lexer->yylex(); // YYlex envoie le type du token actuel et avance le curseur
 		return INTEGER;
 	}
@@ -135,7 +135,11 @@ TYPES Factor(void){
 		type = Number();
 	} else if(current==ID) {
 		type = Identifier();
-	}else if (getKeyword()==TRUE){ // a modif 
+	} else if (current==CHARCONST){
+		cout << "\tpush $"<<lexer->YYText()<<endl;
+		current=(TOKEN) lexer->yylex();
+		type = CHAR;
+	} else if (getKeyword()==TRUE){ // a modif 
 		cout << "\tpush $0xFFFFFFFFFFFFFFFF"<<endl;
 		current=(TOKEN) lexer->yylex();
 		type = BOOLEAN;
@@ -173,36 +177,55 @@ TYPES Term(void){
 	while(current==MULOP){
 		mulop=MultiplicativeOperator();		// Save operator in local variable
 		typeB = Factor();
-		if (typeA!=INTEGER || typeB!=INTEGER)
+		if (typeA!=typeB)
 			Error("meme type attendu"); // same type expected
-		cout << "\tpop %rbx"<<endl;	// get first operand
-		cout << "\tpop %rax"<<endl;	// get second operand
+		if (typeA==DOUBLE) {
+			cout<<"\tfldl	8(%rsp)\t"<<endl;
+			cout<<"\tfldl	(%rsp)\t# first operand -> %st(0) ; second operand -> %st(1)"<<endl;
+		} else if (typeA==INTEGER || typeA==BOOLEAN) {
+			cout << "\tpop %rbx"<<endl;	// get first operand
+			cout << "\tpop %rax"<<endl;	// get second operand
+		}
 		switch(mulop){
 			case AND:
-				if (typeA!=INTEGER)
+				if (typeA!=BOOLEAN)
 					Error("Booléens attendus"); // same type expected
 				cout << "\tmulq	%rbx"<<endl;	// a * b -> %rdx:%rax
 				cout << "\tpush %rax\t# AND"<<endl;	// store result
 				break;
 			case MUL:
-				if (typeA!=INTEGER)
-					Error("Entiers attendus"); // same type expected
+				if (typeA==INTEGER) {
 				cout << "\tmulq	%rbx"<<endl;	// a * b -> %rdx:%rax
 				cout << "\tpush %rax\t# MUL"<<endl;	// store result
+				} else if (typeA == DOUBLE) {
+					cout<<"\tfmulp	%st(0),%st(1)\t# %st(0) <- op1 * op2 ; %st(1)=null"<<endl;
+					cout<<"\tfstpl 8(%rsp)"<<endl; 
+					cout<<"\taddq $8, %rsp"<<endl;
+				} else {
+					Error("Entiers ou flottant attendus pour la multiplication"); 
+				}
 				break;
 			case DIV:
-				if (typeA!=INTEGER)
-					Error("Entiers attendus"); // same type expected
-				cout << "\tmovq $0, %rdx"<<endl; 	// Higher part of numerator  
-				cout << "\tdiv %rbx"<<endl;			// quotient goes to %rax
-				cout << "\tpush %rax\t# DIV"<<endl;		// store result
+				if (typeA==INTEGER) {
+					cout << "\tmovq $0, %rdx"<<endl; 	// Higher part of numerator  
+					cout << "\tdiv %rbx"<<endl;			// remainder goes to %rdx
+					cout << "\tpush %rax\t# DIV"<<endl;		// store result
+				} else if (typeA == DOUBLE) {
+					cout<<"\tfdivrp	%st(0),%st(1)\t# %st(0) <- op1 / op2 ; %st(1)=null"<<endl;
+					cout<<"\tfstpl 8(%rsp)"<<endl; 
+					cout<<"\taddq $8, %rsp"<<endl;
+				} else {
+					Error("Entiers ou flottant attendus pour la division");
+				}
 				break;
 			case MOD:
-				if (typeA!=INTEGER)
-					Error("Entiers attendus"); // same type expected
-				cout << "\tmovq $0, %rdx"<<endl; 	// Higher part of numerator  
-				cout << "\tdiv %rbx"<<endl;			// remainder goes to %rdx
-				cout << "\tpush %rdx\t# MOD"<<endl;		// store result
+				if (typeA==INTEGER) {
+					cout << "\tmovq $0, %rdx"<<endl; 	// Higher part of numerator  
+					cout << "\tdiv %rbx"<<endl;			// remainder goes to %rdx
+					cout << "\tpush %rdx\t# MOD"<<endl;		// store result
+				} else {
+					Error("Entiers attendus pour le modulo");
+				}
 				break;
 			default:
 				Error("opérateur multiplicatif attendu");
@@ -283,8 +306,9 @@ TYPES SimpleExpression(void){
 }
 
 TYPES Type(void){
-	if (current!=KEYWORD)
+	if (current!=KEYWORD){
 		Error("Type attendu");
+	}
 	if(strcmp(lexer->YYText(),"INTEGER")==0){
 		current=(TOKEN) lexer->yylex();
 		return INTEGER;
@@ -397,10 +421,12 @@ TYPES Expression(void){
 			cout<<"\tfldl	(%rsp)\t"<<endl;
 			cout<<"\tfldl	8(%rsp)\t# first operand -> %st(0) ; second operand -> %st(1)"<<endl;
 			cout<<"\t addq $16, %rsp\t# 2x pop nothing"<<endl;
-			cout<<"\tfcomip %st(1)\t\t# compare op1 and op2 -> %RFLAGS and pop"<<endl;
+			cout<<"\tfcomip %st(1)"<<endl;
 			cout<<"\tfaddp %st(1)\t# pop nothing"<<endl;
 		} else if (typeA==CHAR){
-			Error("char non supporté");
+			cout << "\tpop %rax"<<endl;
+			cout << "\tpop %rbx"<<endl;
+			cout << "\tcmpb %al, %bl"<<endl;
 		} else {
 			Error("Entier, booléen ou double attendu");
 		}
@@ -509,7 +535,6 @@ void DisplayStatement(void){
 		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 		cout << "\tmovq $FormatStringInt, %rdi   \t# \"%llu\\n\""<<endl; 
 		cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
-		cout << "\tcall printf@PLT   \t # Display the value"<<endl;
 	} else if (type == BOOLEAN){
 		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 		cout << "\tcmpq $0, %rsi   \t# Compare with 0"<<endl;
@@ -519,21 +544,20 @@ void DisplayStatement(void){
 		cout << "displayVrai"<<TagNumber1<<":\tmovq $FormatStringTrue, %rdi   \t# \"TRUE\\n\""<<endl;
 		cout << "Suite"<<TagNumber1<<":"<<endl;
 		cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
-		cout << "\tcall printf@PLT   \t # Display the value"<<endl;
 	} else if (type == DOUBLE){
 		cout << "\tmovsd	(%rsp), %xmm0   \t# L'adresse de la valeur dans le registre xmm0"<<endl;
 		cout << "\tsubq $16 , %rsp   \t# Allocate 16 bytes on stack's top"<<endl;
 		cout << "\tmovsd %xmm0, 8(%rsp)   \t# Store the value on the stack"<<endl;
 		cout << "\tmovq $FormatStringDouble, %rdi   \t# \"%f\\n\""<<endl;
  		cout << "\tadd $24, %rsp   \t# pop nothing"<<endl;
-		cout << "\tcall printf@PLT   \t # Display the value"<<endl;
 	} else if (type == CHAR){
-		cout << "\tmovq $FormatStringChar, %rdi   \t# \"%c\\n\""<<endl; 
-	} else {
+		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
+		cout << "\tmovq $FormatStringCHAR, %rdi   \t# \"%c\\n\""<<endl;
+		cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
+		} else {
 		Error("Entier ou booléen attendu");
 	}
-
-
+	cout << "\tcall printf@PLT   \t # Display the value"<<endl;
 }
 
 // IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]
@@ -699,7 +723,7 @@ int main(void){	// First version : Source code on standard input and assembly co
 	cout << ".data"<<endl;
 	cout << "FormatStringInt:\t.string \"%llu\\n\"\t# used by printf to display 64-bit unsigned integers"<<endl; 
 	cout << "FormatStringDouble:\t.string \"%f\\n\"\t# used by printf to display double precision floating point numbers"<<endl;
-	cout << "FormatStringChar:\t.string \"%c\\n\"\t# used by printf to display characters"<<endl;
+	cout << "FormatStringCHAR:\t.string \"%c\\n\"\t# used by printf to display CHARacters"<<endl;
 	cout << "FormatStringTrue:\t.string \"TRUE\\n\"\t# used by printf to display the boolean value TRUE"<<endl; 
 	cout << "FormatStringFalse:\t.string \"FALSE\\n\"\t# used by printf to display the boolean value FALSE"<<endl; 
 	// Let's proceed to the analysis and code production
@@ -712,6 +736,6 @@ int main(void){	// First version : Source code on standard input and assembly co
 
 	if(current!=FEOF){
 		cerr <<"Caractères en trop à la fin du programme : ["<<current<<"]";
-		Error("."); // unexpected characters at the end of program
+		Error("."); // unexpected CHARacters at the end of program
 	}
 }
