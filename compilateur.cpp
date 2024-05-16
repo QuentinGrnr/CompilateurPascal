@@ -274,6 +274,7 @@ TYPES SimpleExpression(void){
 			case ADD:
 				if (typeA==INTEGER) {
 					cout << "\taddq	%rbx, %rax\t# ADD"<<endl;	// add both operands
+					cout << "\tpush %rax"<<endl;			// store result
 				} else if (typeA == DOUBLE) {
 					cout<<"\tfldl	8(%rsp)\t"<<endl;
 					cout<<"\tfldl	(%rsp)\t# first operand -> %st(0) ; second operand -> %st(1)"<<endl;

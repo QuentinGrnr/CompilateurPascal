@@ -1,16 +1,35 @@
-VAR 
-     g : CHAR;
-     b,z   : BOOLEAN ; 
-     a,c,d : INTEGER;
-     f : DOUBLE.
-g:='a';
-a:=3-1;
-f:=3.14/2.0;
-b:=4.10>89.0;
-z:=(b!=TRUE);
-DISPLAY g == 'p';
-DISPLAY g;
-DISPLAY f;
-DISPLAY b;
-DISPLAY z;
-DISPLAY a.
+VAR		a,b :	INTEGER;
+		c1,c2:	CHAR;
+		num, denum, frac:		DOUBLE.
+c1:='f';
+c2:='a';
+num:=1.0;
+denum:=1.0;
+frac:=num/denum;
+a:=1;
+WHILE frac>0.1 DO
+BEGIN
+	DISPLAY c1;
+	DISPLAY '=';
+	DISPLAY frac;
+	DISPLAY '\n';
+	DISPLAY c2;
+	DISPLAY '=';
+	DISPLAY a;
+	DISPLAY '\n';
+	denum:=denum+1.0;
+	frac:=num/denum;
+	a:=a+1;
+	DISPLAY (a>3);
+	DISPLAY '\n'
+END;
+FOR b:= TO 10 DO
+     FOR a:=10 DOWNTO 1 DO
+     BEGIN
+          DISPLAY a;
+          DISPLAY '*';
+          DISPLAY b;
+          DISPLAY '=';
+          DISPLAY a*b;
+          DISPLAY '\n'
+     END.
