@@ -18,19 +18,31 @@ main:			# The main function body :
 .cfi_startproc
 endbr64
 	pushq %rbp 	# Save the position of the stack's top
-	push $'f'
+	# Number : 1
+	push $1
+	pop a
+	# Number : 2
+	push $2
+	# Number : 3
+	push $3
+	pop %rbx
+	pop %rax
+	addq	%rbx, %rax	# ADD
+	push %rax
+	pop b
+	push $'x'
 	pop c1
-	push $'a'
+	push $'y'
 	pop c2
-	# Number : 1.0
+	# Number : 3.14
 	subq $8, %rsp 	 # allocate 8 bytes on stack's top
-	movl $0, (%rsp) 	# Conversion of 1 (32 bit high part)
-	movl $1072693248, 4(%rsp) 	# Conversion of 1 (32 bit low part)
+	movl $1374389535, (%rsp) 	# Conversion of 3.14 (32 bit high part)
+	movl $1074339512, 4(%rsp) 	# Conversion of 3.14 (32 bit low part)
 	pop num
-	# Number : 1.0
+	# Number : 2.71
 	subq $8, %rsp 	 # allocate 8 bytes on stack's top
-	movl $0, (%rsp) 	# Conversion of 1 (32 bit high part)
-	movl $1072693248, 4(%rsp) 	# Conversion of 1 (32 bit low part)
+	movl $2061584302, (%rsp) 	# Conversion of 2.71 (32 bit high part)
+	movl $1074114068, 4(%rsp) 	# Conversion of 2.71 (32 bit low part)
 	pop denum
 	push num
 	push denum
@@ -40,46 +52,17 @@ endbr64
 	fstpl 8(%rsp)
 	addq $8, %rsp
 	pop frac
-	# Number : 1
-	push $1
-	pop a
-TESTWHILE1:
-	push frac
-	# Number : 0.1
-	subq $8, %rsp 	 # allocate 8 bytes on stack's top
-	movl $2576980378, (%rsp) 	# Conversion of 0.1 (32 bit high part)
-	movl $1069128089, 4(%rsp) 	# Conversion of 0.1 (32 bit low part)
-	fldl	(%rsp)	
-	fldl	8(%rsp)	# first operand -> %st(0) ; second operand -> %st(1)
-	 addq $16, %rsp	# 2x pop nothing
-	fcomip %st(1)
-	faddp %st(1)	# pop nothing
-	ja Vrai2	# If above
-	push $0		# False
-	jmp Suite2
-Vrai2:	push $0xFFFFFFFFFFFFFFFF		# True
-Suite2:
-	pop %rax
-	cmpq $0, %rax
-	je FINWHILE1
+	push a
+	pop %rsi   	# The value to be displayed
+	movq $FormatStringInt, %rdi   	# "%llu\n"
+	xorl	%eax, %eax    	# No floating point arguments
+	call printf@PLT   	 # Display the value
+	push b
+	pop %rsi   	# The value to be displayed
+	movq $FormatStringInt, %rdi   	# "%llu\n"
+	xorl	%eax, %eax    	# No floating point arguments
+	call printf@PLT   	 # Display the value
 	push c1
-	pop %rsi   	# The value to be displayed
-	movq $FormatStringCHAR, %rdi   	# "%c\n"
-	xorl	%eax, %eax    	# No floating point arguments
-	call printf@PLT   	 # Display the value
-	push $'='
-	pop %rsi   	# The value to be displayed
-	movq $FormatStringCHAR, %rdi   	# "%c\n"
-	xorl	%eax, %eax    	# No floating point arguments
-	call printf@PLT   	 # Display the value
-	push frac
-	movsd	(%rsp), %xmm0   	# L'adresse de la valeur dans le registre xmm0
-	subq $16 , %rsp   	# Allocate 16 bytes on stack's top
-	movsd %xmm0, 8(%rsp)   	# Store the value on the stack
-	movq $FormatStringDouble, %rdi   	# "%f\n"
-	add $24, %rsp   	# pop nothing
-	call printf@PLT   	 # Display the value
-	push $'\n'
 	pop %rsi   	# The value to be displayed
 	movq $FormatStringCHAR, %rdi   	# "%c\n"
 	xorl	%eax, %eax    	# No floating point arguments
@@ -89,40 +72,67 @@ Suite2:
 	movq $FormatStringCHAR, %rdi   	# "%c\n"
 	xorl	%eax, %eax    	# No floating point arguments
 	call printf@PLT   	 # Display the value
-	push $'='
-	pop %rsi   	# The value to be displayed
-	movq $FormatStringCHAR, %rdi   	# "%c\n"
-	xorl	%eax, %eax    	# No floating point arguments
+	push num
+	movsd	(%rsp), %xmm0   	# L'adresse de la valeur dans le registre xmm0
+	subq $16 , %rsp   	# Allocate 16 bytes on stack's top
+	movsd %xmm0, 8(%rsp)   	# Store the value on the stack
+	movq $FormatStringDouble, %rdi   	# "%f\n"
+	add $24, %rsp   	# pop nothing
 	call printf@PLT   	 # Display the value
+	push denum
+	movsd	(%rsp), %xmm0   	# L'adresse de la valeur dans le registre xmm0
+	subq $16 , %rsp   	# Allocate 16 bytes on stack's top
+	movsd %xmm0, 8(%rsp)   	# Store the value on the stack
+	movq $FormatStringDouble, %rdi   	# "%f\n"
+	add $24, %rsp   	# pop nothing
+	call printf@PLT   	 # Display the value
+	push frac
+	movsd	(%rsp), %xmm0   	# L'adresse de la valeur dans le registre xmm0
+	subq $16 , %rsp   	# Allocate 16 bytes on stack's top
+	movsd %xmm0, 8(%rsp)   	# Store the value on the stack
+	movq $FormatStringDouble, %rdi   	# "%f\n"
+	add $24, %rsp   	# pop nothing
+	call printf@PLT   	 # Display the value
+	push a
+	push b
+	pop %rax
+	pop %rbx
+	cmpq %rax, %rbx
+	jb Vrai9	# If below
+	push $0		# False
+	jmp Suite9
+Vrai9:	push $0xFFFFFFFFFFFFFFFF		# True
+Suite9:
+	pop %rax
+	cmpq $0, %rax
+	je ELSE8
 	push a
 	pop %rsi   	# The value to be displayed
 	movq $FormatStringInt, %rdi   	# "%llu\n"
 	xorl	%eax, %eax    	# No floating point arguments
 	call printf@PLT   	 # Display the value
-	push $'\n'
+	jmp FINIF8
+ELSE8:
+	push b
 	pop %rsi   	# The value to be displayed
-	movq $FormatStringCHAR, %rdi   	# "%c\n"
+	movq $FormatStringInt, %rdi   	# "%llu\n"
 	xorl	%eax, %eax    	# No floating point arguments
 	call printf@PLT   	 # Display the value
-	push denum
-	# Number : 1.0
-	subq $8, %rsp 	 # allocate 8 bytes on stack's top
-	movl $0, (%rsp) 	# Conversion of 1 (32 bit high part)
-	movl $1072693248, 4(%rsp) 	# Conversion of 1 (32 bit low part)
-	fldl	8(%rsp)	
-	fldl	(%rsp)	# first operand -> %st(0) ; second operand -> %st(1)
-	faddp	%st(0),%st(1)	# %st(0) <- op1 + op2 ; %st(1)=null
-	fstpl 8(%rsp)
-	addq $8, %rsp
-	pop denum
-	push num
-	push denum
-	fldl	8(%rsp)	
-	fldl	(%rsp)	# first operand -> %st(0) ; second operand -> %st(1)
-	fdivrp	%st(0),%st(1)	# %st(0) <- op1 / op2 ; %st(1)=null
-	fstpl 8(%rsp)
-	addq $8, %rsp
-	pop frac
+FINIF8:
+TESTWHILE12:
+	push a
+	push b
+	pop %rax
+	pop %rbx
+	cmpq %rax, %rbx
+	jb Vrai13	# If below
+	push $0		# False
+	jmp Suite13
+Vrai13:	push $0xFFFFFFFFFFFFFFFF		# True
+Suite13:
+	pop %rax
+	cmpq $0, %rax
+	je FINWHILE12
 	push a
 	# Number : 1
 	push $1
@@ -132,29 +142,52 @@ Suite2:
 	push %rax
 	pop a
 	push a
-	# Number : 3
-	push $3
-	pop %rax
+	pop %rsi   	# The value to be displayed
+	movq $FormatStringInt, %rdi   	# "%llu\n"
+	xorl	%eax, %eax    	# No floating point arguments
+	call printf@PLT   	 # Display the value
+	jmp TESTWHILE12
+FINWHILE12:
+	# Number : 0
+	push $0
+	pop a
+DEBUTFOR15:
+	# Number : 5
+	push $5
+	pop %rbx #	 valeur de l'expression
+	cmpq %rbx, a
+	jae FINFOR15
+	push b
+	push a
 	pop %rbx
-	cmpq %rax, %rbx
-	ja Vrai12	# If above
-	push $0		# False
-	jmp Suite12
-Vrai12:	push $0xFFFFFFFFFFFFFFFF		# True
-Suite12:
+	pop %rax
+	addq	%rbx, %rax	# ADD
+	push %rax
+	pop b
+	push b
 	pop %rsi   	# The value to be displayed
-	cmpq $0, %rsi   	# Compare with 0
-	jne displayVrai11	# If not equal to 0
-	movq $FormatStringFalse, %rdi   	# "FALSE\n"
-	jmp Suite11
-displayVrai11:	movq $FormatStringTrue, %rdi   	# "TRUE\n"
-Suite11:
+	movq $FormatStringInt, %rdi   	# "%llu\n"
 	xorl	%eax, %eax    	# No floating point arguments
 	call printf@PLT   	 # Display the value
-	push $'\n'
-	pop %rsi   	# The value to be displayed
-	movq $FormatStringCHAR, %rdi   	# "%c\n"
-	xorl	%eax, %eax    	# No floating point arguments
-	call printf@PLT   	 # Display the value
-	jmp TESTWHILE1
-FINWHILE1:
+	incq a
+	jmp DEBUTFOR15
+FINFOR15:
+	push num
+	push frac
+	fldl	8(%rsp)	
+	fldl	(%rsp)	# first operand -> %st(0) ; second operand -> %st(1)
+	faddp	%st(0),%st(1)	# %st(0) <- op1 + op2 ; %st(1)=null
+	fstpl 8(%rsp)
+	addq $8, %rsp
+	pop num
+	push denum
+	push frac
+	fldl	(%rsp)	
+	fldl	8(%rsp)	# first operand -> %st(0) ; second operand -> %st(1)
+	fsubp	%st(0),%st(1)	# %st(0) <- op1 - op2 ; %st(1)=null
+	fstpl 8(%rsp)
+	addq	$8, %rsp	# result on stack's top
+	pop denum
+	popq %rbp		# Restore the position of the stack's top
+	ret			# Return from main function
+.cfi_endproc

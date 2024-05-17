@@ -6,10 +6,14 @@ J'ai du annalyser le fonctionnement du printf en assembleur sur mon systeme pour
 **__- Ajout de la fonction getType : permet de récupérer le type d'une variable__**
 Cette fonction permet de récupérer le type d'une variable en fonction de son nom. Elle est utilisée pour vérifier que les types des variables sont compatibles lors d'une assignation.
 **__- Ajout des KEYWORDS "TRUE" et "FALSE" : permet de définir la valeur booléenne__**
+**__- Ajout des commentaires : permet de commenter le code__**
+Les commentaires sont de la forme `// commentaire //` et sont ignorés par le compilateur. WARN : les commentaires sont interpretés comme des instructions, ainsi ils peuvent etre placée dans les partie du code qui acceptent des instructions (par exemple pas dans les déclarations).
 
 ### Afaire
+- ajout affichage commentaire assembleur
 - implementer NOT
 - modif reconnaissance true/false dans factor()
+- ajout operations int with float
 
 A simple compiler.
 From : Pascal-like imperative LL(k) langage

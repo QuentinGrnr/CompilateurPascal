@@ -30,7 +30,7 @@
 
 using namespace std;
 
-enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY, DOWNTO,TRUE, FALSE};
+enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY, DOWNTO,TRUE, FALSE, NONE};
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
@@ -62,14 +62,13 @@ void Error(string s){
 // VarDeclarationPart := "VAR" VarDeclaration {";" VarDeclaration} "."
 // VarDeclaration := Ident {"," Ident} ":" Type
 // StatementPart := Statement {";" Statement} "."
-// Statement := AssignementStatement | IfStatement | WhileStatement | ForStatement | BlockStatement
+// Statement := AssignementStatement | IfStatement | WhileStatement | ForStatement | BlockStatement | DisplayStatement
 
 // AssignementStatement := Letter "=" Expression
 // IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]
 // WhileStatement := "WHILE" Expression "DO" Statement
 // ForStatement := "FOR" AssignementStatement "To" Expression "DO" Statement
 // BlockStatement := "BEGIN" Statement { ";" Statement } "END"
-
 
 // Expression := SimpleExpression [RelationalOperator SimpleExpression]
 // SimpleExpression := Term {AdditiveOperator Term}
@@ -493,7 +492,7 @@ KEYWORDS getKeyword(void){
 	else if (strcmp(lexer->YYText(),"FALSE")==0)
 		kw=FALSE;
 	else
-		kw=IF;
+		kw=NONE;
 	return kw;
 }
 
@@ -659,7 +658,6 @@ void BlockStatement(void){
 		Error("Mot clé 'END' attendu");
 	current=(TOKEN) lexer->yylex();
 }
-
 
 // Statement := AssignementStatement | IfStatement | WhileStatement | ForStatement | BlockStatement
 void Statement(void){
