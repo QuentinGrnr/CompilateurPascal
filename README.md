@@ -9,8 +9,7 @@ Cette fonction permet de récupérer le type d'une variable en fonction de son n
 **__- Ajout des commentaires : permet de commenter le code__**
 Les commentaires sont de la forme `// commentaire //` et sont ignorés par le compilateur. WARN : les commentaires sont interpretés comme des instructions, ainsi ils peuvent etre placée dans les partie du code qui acceptent des instructions (par exemple pas dans les déclarations).
 
-### Afaire
-- ajout affichage commentaire assembleur
+### A faire
 - implementer NOT
 - modif reconnaissance true/false dans factor()
 - ajout operations int with float
