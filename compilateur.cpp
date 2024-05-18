@@ -30,7 +30,7 @@
 
 using namespace std;
 
-enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY, DOWNTO,TRUE, FALSE, NONE};
+enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY, DOWNTO,TRUE, FALSE, NONE, CASE, OF};
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
@@ -69,6 +69,10 @@ void Error(string s){
 // WhileStatement := "WHILE" Expression "DO" Statement
 // ForStatement := "FOR" AssignementStatement "To" Expression "DO" Statement
 // BlockStatement := "BEGIN" Statement { ";" Statement } "END"
+// CaseStatement ::= "CASE" Expression "OF" CaseListElement {; CaseListElement } "END"
+// CaseListElement ::= CaseLabelList ":" Statement | Empty
+// CaseLabelList ::= Factor {, Factor }
+// Empty::=
 
 // Expression := SimpleExpression [RelationalOperator SimpleExpression]
 // SimpleExpression := Term {AdditiveOperator Term}
@@ -101,7 +105,6 @@ TYPES Identifier(void){
 
 TYPES Number(void){
 	double floatNumber;
-	cout << "\t# Number : "<<lexer->YYText()<<endl;
 	unsigned int *p;
 	string nbr = lexer->YYText();
 	if (current!=NUMBER)
@@ -403,6 +406,8 @@ OPREL RelationalOperator(void){
 	return oprel;
 }
 
+
+
 // Expression := SimpleExpression [RelationalOperator SimpleExpression]
 TYPES Expression(void){
 	enum TYPES typeA, typeB;
@@ -491,6 +496,8 @@ KEYWORDS getKeyword(void){
 		kw=TRUE;
 	else if (strcmp(lexer->YYText(),"FALSE")==0)
 		kw=FALSE;
+	else if (strcmp(lexer->YYText(),"CASE")==0)
+		kw=CASE;
 	else
 		kw=NONE;
 	return kw;
@@ -527,7 +534,6 @@ string AssignementStatement(void){
 
 // DisplayStatement := "DISPLAY" Expression
 void DisplayStatement(void){
-	unsigned long TagNumber1 = ++TagNumber;
 	enum TYPES type;
 	current=(TOKEN) lexer->yylex();
 	type = Expression();
@@ -538,11 +544,11 @@ void DisplayStatement(void){
 	} else if (type == BOOLEAN){
 		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 		cout << "\tcmpq $0, %rsi   \t# Compare with 0"<<endl;
-		cout << "\tjne displayVrai"<<TagNumber1<<"\t# If not equal to 0"<<endl;
+		cout << "\tjne displayVrai"<<++TagNumber<<"\t# If not equal to 0"<<endl;
 		cout << "\tmovq $FormatStringFalse, %rdi   \t# \"FALSE\\n\""<<endl;
-		cout << "\tjmp Suite"<<TagNumber1<<endl;
-		cout << "displayVrai"<<TagNumber1<<":\tmovq $FormatStringTrue, %rdi   \t# \"TRUE\\n\""<<endl;
-		cout << "Suite"<<TagNumber1<<":"<<endl;
+		cout << "\tjmp Suite"<<TagNumber<<endl;
+		cout << "displayVrai"<<TagNumber<<":\tmovq $FormatStringTrue, %rdi   \t# \"TRUE\\n\""<<endl;
+		cout << "Suite"<<TagNumber<<":"<<endl;
 		cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
 	} else if (type == DOUBLE){
 		cout << "\tmovsd	(%rsp), %xmm0   \t# L'adresse de la valeur dans le registre xmm0"<<endl;
@@ -659,7 +665,76 @@ void BlockStatement(void){
 	current=(TOKEN) lexer->yylex();
 }
 
-// Statement := AssignementStatement | IfStatement | WhileStatement | ForStatement | BlockStatement
+void CaseComparaison (TYPES typeExpression){
+	// aprés mure réflexion, je n'ai pas trouvé d'autre solution que de dupliquer le code de la fonction Expression() pour la comparaison
+	TYPES typeFactor = Factor();
+	if (typeFactor!=typeExpression)
+		Error("Cas de même type que l'expression attendu (case)");
+	if (typeFactor==INTEGER || typeFactor==BOOLEAN){
+		cout << "\tpop %rax"<<endl;// %rax = expression value ; %rbx = case value
+		cout << "\tpop %rbx"<<endl;// %rax = expression value ; %rbx = case value
+		cout << "\tcmpq %rax, %rbx"<<endl;
+		cout << "\tpush %rax"<<endl;
+		cout << "\tje CASEVRAIS"<<TagNumber<<endl;
+	} else if (typeFactor==CHAR){
+		cout << "\tpop %rax"<<endl;// %rax = expression value ; %rbx = case value
+		cout << "\tpop %rbx"<<endl;// %rax = expression value ; %rbx = case value
+		cout << "\tcmpb %al, %bl"<<endl;
+		cout << "\tje CASEVRAIS"<<TagNumber<<endl;
+	}
+}
+
+
+// CaseLabelList ::= Factor {, Factor }
+void CaseLabelList(TYPES typeExpression){
+	unsigned long ThisCase=++TagNumber;
+	CaseComparaison(typeExpression);
+	while(current==COMMA){
+		CaseComparaison(typeExpression);
+	}
+	cout << "\tjmp ENDCASE"<<ThisCase<<endl;
+}
+
+// CaseListElement ::= CaseLabelList ":" Statement | Empty
+void CaseListElement(TYPES typeExpression){
+	CaseLabelList(typeExpression);
+	if (current!=COLON){
+		Error("':' attendu après la liste des cas");
+	}
+	current=(TOKEN) lexer->yylex();
+	if ((current==KEYWORD && getKeyword()!=END) && (strcmp(lexer->YYText(),";")!=0)){ // si le statement n'est pas vide
+		cout << "CASEVRAIS"<<TagNumber<<":"<<endl;
+		Statement();
+	}
+}
+
+// CaseStatement ::= "CASE" Expression "OF" CaseListElement {; CaseListElement } "END"
+void CaseStatement(void){
+	cout << "# CaseStatement"<<endl;
+	if(current!=KEYWORD && getKeyword()!=CASE)
+		Error("Mot clé 'CASE' attendu");
+	current=(TOKEN) lexer->yylex();
+	TYPES typeExpression = Expression();
+	if(current!=KEYWORD && getKeyword()!=OF)
+		Error("Mot clé 'OF' attendu");
+	current=(TOKEN) lexer->yylex();
+	if (typeExpression==DOUBLE)
+		Error("Type double non implenté pour les cases");
+	CaseListElement(typeExpression);
+	while(current==SEMICOLON){
+		cout << "ENDCASE"<<TagNumber<<":"<<endl;
+		current=(TOKEN) lexer->yylex();
+		CaseListElement(typeExpression);
+	}
+	cout << "ENDCASE"<<TagNumber<<":"<<endl;
+	if(current!=KEYWORD && getKeyword()!=END)
+		Error("Mot clé 'END' attendu");
+	current=(TOKEN) lexer->yylex();
+}
+
+
+
+// Statement := AssignementStatement | IfStatement | WhileStatement | ForStatement | BlockStatement | DisplayStatement | CaseStatement
 void Statement(void){
 	switch(current){
 		case ID:
@@ -681,6 +756,9 @@ void Statement(void){
 					break;
 				case DISPLAY:
 					DisplayStatement();
+					break;
+				case CASE:
+					CaseStatement();
 					break;
 				default:
 					Error("Instruction non reconnue");
