@@ -30,7 +30,7 @@
 
 using namespace std;
 
-enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY, DOWNTO,TRUE, FALSE, NONE, CASE, OF};
+enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY, DOWNTO,TRUE, FALSE, NONE, CASE, OF, DEFAULT};
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
@@ -433,7 +433,7 @@ TYPES Expression(void){
 			cout << "\tpop %rbx"<<endl;
 			cout << "\tcmpb %al, %bl"<<endl;
 		} else {
-			Error("Entier, booléen ou double attendu");
+			Error("Entier, booléen, char ou double attendu");
 		}
 		switch(oprel){
 			case EQU:
@@ -498,6 +498,10 @@ KEYWORDS getKeyword(void){
 		kw=FALSE;
 	else if (strcmp(lexer->YYText(),"CASE")==0)
 		kw=CASE;
+	else if (strcmp(lexer->YYText(),"OF")==0)
+		kw=OF;
+	else if (strcmp(lexer->YYText(),"DEFAULT")==0)
+		kw=DEFAULT;
 	else
 		kw=NONE;
 	return kw;
@@ -671,19 +675,17 @@ void CaseComparaison (TYPES typeExpression){
 	if (typeFactor!=typeExpression)
 		Error("Cas de même type que l'expression attendu (case)");
 	if (typeFactor==INTEGER || typeFactor==BOOLEAN){
-		cout << "\tpop %rax"<<endl;// %rax = expression value ; %rbx = case value
-		cout << "\tpop %rbx"<<endl;// %rax = expression value ; %rbx = case value
+		cout << "\tpop %rax"<<endl;
 		cout << "\tcmpq %rax, %rbx"<<endl;
-		cout << "\tpush %rax"<<endl;
 		cout << "\tje CASEVRAIS"<<TagNumber<<endl;
 	} else if (typeFactor==CHAR){
-		cout << "\tpop %rax"<<endl;// %rax = expression value ; %rbx = case value
-		cout << "\tpop %rbx"<<endl;// %rax = expression value ; %rbx = case value
+		cout << "\tpop %rax"<<endl;
 		cout << "\tcmpb %al, %bl"<<endl;
 		cout << "\tje CASEVRAIS"<<TagNumber<<endl;
+	} else {
+		Error("Entier, booléen ou char attendu pour les cases");
 	}
 }
-
 
 // CaseLabelList ::= Factor {, Factor }
 void CaseLabelList(TYPES typeExpression){
@@ -696,7 +698,7 @@ void CaseLabelList(TYPES typeExpression){
 }
 
 // CaseListElement ::= CaseLabelList ":" Statement | Empty
-void CaseListElement(TYPES typeExpression){
+void CaseListElement(TYPES typeExpression, int caseTagNumber){
 	CaseLabelList(typeExpression);
 	if (current!=COLON){
 		Error("':' attendu après la liste des cas");
@@ -705,31 +707,52 @@ void CaseListElement(TYPES typeExpression){
 	if ((current==KEYWORD && getKeyword()!=END) && (strcmp(lexer->YYText(),";")!=0)){ // si le statement n'est pas vide
 		cout << "CASEVRAIS"<<TagNumber<<":"<<endl;
 		Statement();
+		cout << "\tjmp CASEFINISHED"<<caseTagNumber<<endl;
 	}
 }
 
-// CaseStatement ::= "CASE" Expression "OF" CaseListElement {; CaseListElement } "END"
+// CaseStatement ::= "CASE" Expression "OF" CaseListElement {";" CaseListElement } [";" DEFAULT Statement] "END"
 void CaseStatement(void){
-	cout << "# CaseStatement"<<endl;
+	unsigned long TagNumber1=++TagNumber;// TagNumber1 est le numéro du CASE nous permettant de sauter les cases si une condition est vérifiée
+	cout << "#-----------------------CaseStatement"<< TagNumber1 << "-----------------------#"<<endl;
+	
 	if(current!=KEYWORD && getKeyword()!=CASE)
 		Error("Mot clé 'CASE' attendu");
+
 	current=(TOKEN) lexer->yylex();
 	TYPES typeExpression = Expression();
 	if(current!=KEYWORD && getKeyword()!=OF)
 		Error("Mot clé 'OF' attendu");
+	
 	current=(TOKEN) lexer->yylex();
 	if (typeExpression==DOUBLE)
 		Error("Type double non implenté pour les cases");
-	CaseListElement(typeExpression);
-	while(current==SEMICOLON){
-		cout << "ENDCASE"<<TagNumber<<":"<<endl;
-		current=(TOKEN) lexer->yylex();
-		CaseListElement(typeExpression);
-	}
+	cout << "\tpop %rbx"<<endl; // l'expression est stockée dans rbx durant tout le casestatement
+
+	CaseListElement(typeExpression, TagNumber1); // type = pour eviter les comparaisons de types différents, TagNumber1 = permettre le jmp à la fin du casestatement si une condition est vérifiée
 	cout << "ENDCASE"<<TagNumber<<":"<<endl;
+	while(current==SEMICOLON){
+		current=(TOKEN) lexer->yylex();
+		if (current==KEYWORD && getKeyword()==DEFAULT){
+			current=(TOKEN) lexer->yylex();
+			if (current!=COLON)
+				Error("':' attendu après le mot clé 'DEFAULT'");
+			current=(TOKEN) lexer->yylex();
+			Statement();
+			if (current!=KEYWORD && getKeyword()!=END)
+				Error("Mot clé 'END' attendu après le mot clé 'DEFAULT'");
+			break;
+		} else {
+			CaseListElement(typeExpression, TagNumber1);
+			cout << "ENDCASE"<<TagNumber<<":"<<endl;
+		}
+
+	}
+	cout << "CASEFINISHED"<<TagNumber1<<":"<<endl;
 	if(current!=KEYWORD && getKeyword()!=END)
 		Error("Mot clé 'END' attendu");
 	current=(TOKEN) lexer->yylex();
+	cout << "#-----------------------EndCaseStatement"<< TagNumber1 << "-----------------------#"<<endl;
 }
 
 

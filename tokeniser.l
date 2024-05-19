@@ -25,7 +25,7 @@ alpha   [A-Za-z]
 digit   [0-9]
 number  {digit}+(\.{digit}+)?
 boolVal ("TRUE"|"FALSE")
-keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"FOR"|"DO"|"TO"|"BEGIN"|"END"|"VAR"|"INTEGER"|"BOOLEAN"|"DISPLAY"|"DOWNTO"|"DOUBLE"|"CHAR"|"TRUE"|"FALSE"|"NONE"|"CASE"|"OF")
+keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"FOR"|"DO"|"TO"|"BEGIN"|"END"|"VAR"|"INTEGER"|"BOOLEAN"|"DISPLAY"|"DOWNTO"|"DOUBLE"|"CHAR"|"TRUE"|"FALSE"|"NONE"|"CASE"|"OF"|"DEFAULT")
 id	{alpha}({alpha}|{digit})*
 addop	(\+|\-|\|\|) 
 mulop	(\*|\/|%|\&\&) 
