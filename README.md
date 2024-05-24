@@ -14,6 +14,7 @@ Les commentaires sont de la forme `// commentaire //` et sont ignorés par le co
 - ajouter com pour chaqeu statement
 - implementer NOT
 - modif reconnaissance true/false dans factor()
+- ajouter dans for step specifique
 - ajout operations int with float
 - ajout précision erreur (fonction)
 - ajout case float
