@@ -149,7 +149,15 @@ TYPES Factor(void){
 		cout << "\tpush $0"<<endl;
 		current=(TOKEN) lexer->yylex();
 		type = BOOLEAN;
-	} else 
+	} else if (current==NOT){
+		current=(TOKEN) lexer->yylex();
+		type = Factor();
+		if (type!=BOOLEAN)
+			Error("Booléen attendu");
+		cout << "\tpop %rax"<<endl;
+		cout << "\txorq $0xFFFFFFFFFFFFFFFF, %rax"<<endl;
+		cout << "\tpush %rax"<<endl;
+	} else
 		Error("'(', chiffre ou lettre attendue");
 	return type;
 }
@@ -192,8 +200,8 @@ TYPES Term(void){
 			case AND:
 				if (typeA!=BOOLEAN)
 					Error("Booléens attendus"); // same type expected
-				cout << "\tmulq	%rbx"<<endl;	// a * b -> %rdx:%rax
-				cout << "\tpush %rax\t# AND"<<endl;	// store result
+				cout << "\tandq	%rbx, %rax\t# AND"<<endl;	// operand1 AND operand2
+				cout << "\tpush %rax"<<endl;			// store result
 				break;
 			case MUL:
 				if (typeA==INTEGER) {
@@ -517,6 +525,7 @@ TYPES getType (string variable){
 
 // AssignementStatement := Identifier ":=" Expression
 string AssignementStatement(void){
+	cout << "#-----------------------AssignementStatement"<< TagNumber << "-----------------------#"<<endl;
 	enum TYPES type1, type2;
 	string variable;
 	if(current!=ID)
@@ -538,6 +547,7 @@ string AssignementStatement(void){
 
 // DisplayStatement := "DISPLAY" Expression
 void DisplayStatement(void){
+	cout << "#-----------------------DisplayStatement"<< TagNumber << "-----------------------#"<<endl;
 	enum TYPES type;
 	current=(TOKEN) lexer->yylex();
 	type = Expression();
@@ -573,6 +583,7 @@ void DisplayStatement(void){
 // IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]
 void IfStatement(void){
 	unsigned long TagNumber1 = ++TagNumber;
+	cout << "#-----------------------IfStatement"<< TagNumber1 << "-----------------------#"<<endl;
 	if(current!=KEYWORD && getKeyword()!=IF)
 		Error("Mot clé 'IF' attendu");
 	current=(TOKEN) lexer->yylex();
@@ -596,6 +607,7 @@ void IfStatement(void){
 // WhileStatement := "WHILE" Expression "DO" Statement
 void WhileStatement(void){
 	unsigned long TagNumber1=++TagNumber;
+	cout << "#-----------------------WhileStatement"<< TagNumber1 << "-----------------------#"<<endl;
 	if(current!=KEYWORD && getKeyword()!=WHILE)
 		Error("Mot clé 'WHILE' attendu");
 	current=(TOKEN) lexer->yylex();
@@ -614,9 +626,10 @@ void WhileStatement(void){
 
 // FORStatement := "FOR" AssignementStatement ("TO"|"DOWNTO") Expression "DO" Statement
 void ForStatement(void){
+	unsigned long TagNumber1=++TagNumber;
+	cout << "#-----------------------ForStatement"<< TagNumber1 << "-----------------------#"<<endl;
 	enum TYPES type1, type2;
 	bool to = false; // true if the keyword is TO, false if it is DOWNTO
-	unsigned long TagNumber1=++TagNumber;
 	string variable;
 	if(current!=KEYWORD && getKeyword()!=FOR)
 		Error("Mot clé 'FOR' attendu");
@@ -656,6 +669,7 @@ void ForStatement(void){
 
 // BlockStatement := "BEGIN" Statement { ";" Statement } "END"
 void BlockStatement(void){
+	cout << "#-----------------------BlockStatement"<< TagNumber << "-----------------------#"<<endl;
 	if(current!=KEYWORD && getKeyword()!=BEGIN)
 		Error("Mot clé 'BEGIN' attendu");
 	current=(TOKEN) lexer->yylex();
@@ -752,7 +766,18 @@ void CaseStatement(void){
 	if(current!=KEYWORD && getKeyword()!=END)
 		Error("Mot clé 'END' attendu");
 	current=(TOKEN) lexer->yylex();
-	cout << "#-----------------------EndCaseStatement"<< TagNumber1 << "-----------------------#"<<endl;
+}
+
+// NotStatement ::= "NOT" Expression
+void NotStatement(void){
+	cout << "#-----------------------NotStatement"<< TagNumber << "-----------------------#"<<endl;
+	if(current!=NOT)
+		Error("Mot clé 'NOT' attendu");
+	current=(TOKEN) lexer->yylex();
+	Expression();
+	cout << "\tpop %rax"<<endl;
+	cout << "\txorq $0xFFFFFFFFFFFFFFFF, %rax"<<endl;
+	cout << "\tpush %rax"<<endl;
 }
 
 
@@ -783,9 +808,15 @@ void Statement(void){
 				case CASE:
 					CaseStatement();
 					break;
+				case NOT:
+					NotStatement();
+					break;
 				default:
 					Error("Instruction non reconnue");
 			}
+			break;
+		case NOT:
+			NotStatement();
 			break;
 		default:
 			Error("Instruction non reconnue");

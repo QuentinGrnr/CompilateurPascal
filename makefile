@@ -9,7 +9,7 @@ tokeniser.o:	tokeniser.cpp
 compilateur:	compilateur.cpp tokeniser.o
 		g++ -ggdb -o compilateur compilateur.cpp tokeniser.o
 test:		compilateur test.p
-		./compilateur <test.p >test.s
+		./compilateur <test.p> test.s
 		gcc -ggdb -no-pie test.s -o test
 
 
