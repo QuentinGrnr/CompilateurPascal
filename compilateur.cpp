@@ -266,29 +266,41 @@ TYPES SimpleExpression(void){
 	while(current==ADDOP){
 		adop=AdditiveOperator();		// Save operator in local variable
 		typeB = Term();
-		if (typeA!=typeB)
-			Error("assignation de meme type attendue"); // same type expected
+		if (typeA!=typeB && !((typeA==DOUBLE && typeB==INTEGER) || (typeA==INTEGER && typeB==DOUBLE)))
+			Error("assignation de meme type ou double et entier attendu");
 		if (typeA!=INTEGER && typeA!=BOOLEAN && typeA!=DOUBLE)
 			Error("Entier, booléen ou double attendu"); // same type expected
-		if (typeA == INTEGER || typeA == BOOLEAN) {
-			cout << "\tpop %rbx"<<endl;	// get first operand
-			cout << "\tpop %rax"<<endl;	// get second operand
-		}
 		switch(adop){
 			case OR:
 				if (typeA!=BOOLEAN)
 					Error("Booléens attendus"); // same type expected
+					cout << "\tpop %rbx"<<endl;	// get first operand
+					cout << "\tpop %rax"<<endl;	// get second operand
 					cout << "\taddq	%rbx, %rax\t# OR"<<endl;// operand1 OR operand2
 					cout << "\tpush %rax"<<endl;			// store result
 				break;			
 			case ADD:
-				if (typeA==INTEGER) {
+				if (typeA == DOUBLE && typeB == INTEGER) {
+					cout << "\tfildl (%rsp)\t" << endl; // load int
+					cout << "\tfldl 8(%rsp)\t" << endl; // load double
+					cout << "\tfaddp	%st(0),%st(1)"<<endl;
+					cout << "\tfstpl 8(%rsp)"<<endl; 
+					cout << "\taddq $8, %rsp"<<endl;
+				} else if (typeA == INTEGER && typeB == DOUBLE) {
+					cout << "\tfldl (%rsp)\t" << endl; // load double
+					cout << "\tfildl 8(%rsp)\t" << endl; // load int
+					cout << "\tfaddp	%st(0),%st(1)"<<endl;
+					cout << "\tfstpl 8(%rsp)"<<endl; 
+					cout << "\taddq $8, %rsp"<<endl;
+				} else if (typeA==INTEGER) {
+					cout << "\tpop %rbx"<<endl;	// get first operand
+					cout << "\tpop %rax"<<endl;	// get second operand
 					cout << "\taddq	%rbx, %rax\t# ADD"<<endl;	// add both operands
 					cout << "\tpush %rax"<<endl;			// store result
 				} else if (typeA == DOUBLE) {
 					cout<<"\tfldl	8(%rsp)\t"<<endl;
-					cout<<"\tfldl	(%rsp)\t# first operand -> %st(0) ; second operand -> %st(1)"<<endl;
-					cout<<"\tfaddp	%st(0),%st(1)\t# %st(0) <- op1 + op2 ; %st(1)=null"<<endl;
+					cout<<"\tfldl	(%rsp)"<<endl;
+					cout<<"\tfaddp	%st(0),%st(1)"<<endl;
 					cout<<"\tfstpl 8(%rsp)"<<endl; 
 					cout<<"\taddq $8, %rsp"<<endl;
 				} else {
@@ -298,13 +310,27 @@ TYPES SimpleExpression(void){
 			case SUB:
 				if (typeA!=INTEGER && typeA!=DOUBLE)
 					Error("Entiers attendus"); // same type expected
-				if (typeA == DOUBLE) {
+				if (typeA == DOUBLE && typeB == INTEGER) {
+					cout << "\tfildl (%rsp)\t" << endl; // load int
+					cout << "\tfldl 8(%rsp)\t" << endl; // load double
+					cout << "\tfsubp	%st(0),%st(1)"<<endl;
+					cout << "\tfstpl 8(%rsp)"<<endl; 
+					cout << "\taddq $8, %rsp"<<endl;
+				} else if (typeA == INTEGER && typeB == DOUBLE) {
+					cout << "\tfldl (%rsp)\t" << endl; // load double
+					cout << "\tfildl 8(%rsp)\t" << endl; // load int
+					cout << "\tfsubp	%st(0),%st(1)"<<endl;
+					cout << "\tfstpl 8(%rsp)"<<endl; 
+					cout << "\taddq $8, %rsp"<<endl;
+				} else	if (typeA == DOUBLE) {
 					cout<<"\tfldl	(%rsp)\t"<<endl;
 					cout<<"\tfldl	8(%rsp)\t# first operand -> %st(0) ; second operand -> %st(1)"<<endl;
 					cout<<"\tfsubp	%st(0),%st(1)\t# %st(0) <- op1 - op2 ; %st(1)=null"<<endl;
 					cout<<"\tfstpl 8(%rsp)"<<endl;
 					cout<<"\taddq	$8, %rsp\t# result on stack's top"<<endl; 
-				} else {
+				} else if (typeA==INTEGER) {
+					cout << "\tpop %rbx"<<endl;	// get first operand
+					cout << "\tpop %rax"<<endl;	// get second operand
 					cout << "\tsubq	%rbx, %rax\t# SUB"<<endl;	// substract both operands
 					cout << "\tpush %rax"<<endl;			// store result
 				}
@@ -525,7 +551,7 @@ TYPES getType (string variable){
 
 // AssignementStatement := Identifier ":=" Expression
 string AssignementStatement(void){
-	cout << "#-----------------------AssignementStatement"<< TagNumber << "-----------------------#"<<endl;
+	cout << "#-----------------------AssignementStatement-----------------------#"<<endl;
 	enum TYPES type1, type2;
 	string variable;
 	if(current!=ID)
@@ -539,7 +565,7 @@ string AssignementStatement(void){
 		Error("':=' attendu");
 	current=(TOKEN) lexer->yylex();
 	type2=Expression();
-	if (type1!=type2)
+	if (type1!=type2 && !((type1==DOUBLE && type2==INTEGER) || (type1==INTEGER && type2==DOUBLE)))
 		Error("Memes types attendus");
 	cout << "\tpop "<<variable<<endl;
 	return variable;	
@@ -722,6 +748,11 @@ void CaseListElement(TYPES typeExpression, int caseTagNumber){
 		cout << "CASEVRAIS"<<TagNumber<<":"<<endl;
 		Statement();
 		cout << "\tjmp CASEFINISHED"<<caseTagNumber<<endl;
+	} else if (strcmp(lexer->YYText(),";")==0){ // si le statement est vide
+		cout << "CASEVRAIS"<<TagNumber<<":"<<endl;
+		cout << "\tjmp CASEFINISHED"<<caseTagNumber<<endl;
+	} else {
+		Error("Instruction attendue après les cas");
 	}
 }
 

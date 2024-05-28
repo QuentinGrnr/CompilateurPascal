@@ -12,8 +12,8 @@ Permet de gérer le cas ou aucune condition n'est vérifiée.
 permet de faire la négation d'une expression booléenne.
 
 ### A faire
-- ajouter dans for step specifique
 - ajout operations int with float
+- comparaison int with float
 - ajout précision erreur (fonction)
 - ajout case float
 

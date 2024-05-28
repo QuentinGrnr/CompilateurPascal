@@ -1,6 +1,6 @@
 VAR		a,b,c :	INTEGER;
 		c1,c2:	CHAR;
-		num, denum, frac:		DOUBLE;
+		num, denum, frac, intD:		DOUBLE;
 		test:	BOOLEAN.
 c1:='f';
 c2:='a';
@@ -44,8 +44,8 @@ CASE 2 OF
 	4: DISPLAY 4
 END;
 CASE c1 OF
-	'a': DISPLAY 'a';
+	'a': ;
 	'b': DISPLAY 'b';
-	'd': DISPLAY 'd';
+	'f': DISPLAY 'f';
 	DEFAULT: DISPLAY 'p'
 END.
