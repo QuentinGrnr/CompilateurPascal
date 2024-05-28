@@ -10,6 +10,8 @@ Cette fonction permet de récupérer le type d'une variable en fonction de son n
 Permet de gérer le cas ou aucune condition n'est vérifiée.
 **__- Ajout de NOT :__**
 permet de faire la négation d'une expression booléenne.
+**__- Ajout d'opérations int avec float :__**
+Permet l'addition, la soustraction, la multiplication et la division entre un entier et un flottant peut importe l'ordre.
 
 ### A faire
 - ajout operations int with float

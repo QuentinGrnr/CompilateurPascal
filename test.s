@@ -1,6 +1,6 @@
 			# This code was produced by the CERI Compiler
 .data
-FormatStringInt:	.string "%llu\n"	# used by printf to display 64-bit unsigned integers
+FormatStringSignedInt:	.string "%lld\n"	# used by printf to display 64-bit unsigned integers
 FormatStringDouble:	.string "%f\n"	# used by printf to display double precision floating point numbers
 FormatStringCHAR:	.string "%c\n"	# used by printf to display CHARacters
 FormatStringTrue:	.string "TRUE\n"	# used by printf to display the boolean value TRUE
@@ -27,7 +27,7 @@ endbr64
 	movl $1073217536, 4(%rsp) 	# Conversion of 1.5 (32 bit low part)
 	push $1
 	fildl (%rsp)	
-	fldl 8(%rsp)	
+	fldl	8(%rsp)
 	faddp	%st(0),%st(1)
 	fstpl 8(%rsp)
 	addq $8, %rsp
@@ -55,10 +55,65 @@ endbr64
 	movl $0, (%rsp) 	# Conversion of 10.5 (32 bit high part)
 	movl $1076166656, 4(%rsp) 	# Conversion of 10.5 (32 bit low part)
 	fldl	(%rsp)	
-	fldl	8(%rsp)	# first operand -> %st(0) ; second operand -> %st(1)
-	fsubp	%st(0),%st(1)	# %st(0) <- op1 - op2 ; %st(1)=null
+	fldl	8(%rsp)
+	fsubp 	%st(0),%st(1)
 	fstpl 8(%rsp)
 	addq	$8, %rsp	# result on stack's top
+	pop intD
+#-----------------------DisplayStatement0-----------------------#
+	push intD
+	movsd	(%rsp), %xmm0   	# L'adresse de la valeur dans le registre xmm0
+	subq $16 , %rsp   	# Allocate 16 bytes on stack's top
+	movsd %xmm0, 8(%rsp)   	# Store the value on the stack
+	movq $FormatStringDouble, %rdi   	# "%f\n"
+	add $24, %rsp   	# pop nothing
+	call printf@PLT   	 # Display the value
+#-----------------------AssignementStatement-----------------------#
+	subq $8, %rsp 	 # allocate 8 bytes on stack's top
+	movl $0, (%rsp) 	# Conversion of 1.5 (32 bit high part)
+	movl $1073217536, 4(%rsp) 	# Conversion of 1.5 (32 bit low part)
+	push $2
+	fildl (%rsp)	
+	fldl	8(%rsp)
+	fmulp	%st(0),%st(1)	# %st(0) <- op1 * op2 ; %st(1)=null
+	fstpl 8(%rsp)
+	addq $8, %rsp
+	pop intD
+#-----------------------DisplayStatement0-----------------------#
+	push intD
+	movsd	(%rsp), %xmm0   	# L'adresse de la valeur dans le registre xmm0
+	subq $16 , %rsp   	# Allocate 16 bytes on stack's top
+	movsd %xmm0, 8(%rsp)   	# Store the value on the stack
+	movq $FormatStringDouble, %rdi   	# "%f\n"
+	add $24, %rsp   	# pop nothing
+	call printf@PLT   	 # Display the value
+#-----------------------AssignementStatement-----------------------#
+	push $6
+	push $2
+	pop %rbx
+	pop %rax
+	movq $0, %rdx
+	div %rbx
+	push %rax	# DIV
+	pop intD
+#-----------------------DisplayStatement0-----------------------#
+	push intD
+	movsd	(%rsp), %xmm0   	# L'adresse de la valeur dans le registre xmm0
+	subq $16 , %rsp   	# Allocate 16 bytes on stack's top
+	movsd %xmm0, 8(%rsp)   	# Store the value on the stack
+	movq $FormatStringDouble, %rdi   	# "%f\n"
+	add $24, %rsp   	# pop nothing
+	call printf@PLT   	 # Display the value
+#-----------------------AssignementStatement-----------------------#
+	subq $8, %rsp 	 # allocate 8 bytes on stack's top
+	movl $0, (%rsp) 	# Conversion of 3 (32 bit high part)
+	movl $1074266112, 4(%rsp) 	# Conversion of 3 (32 bit low part)
+	push $2
+	fildl (%rsp)	
+	fldl	8(%rsp)
+	fdivp	%st(0),%st(1)
+	fstpl 8(%rsp)
+	addq $8, %rsp
 	pop intD
 #-----------------------DisplayStatement0-----------------------#
 	push intD

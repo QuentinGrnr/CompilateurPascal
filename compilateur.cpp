@@ -185,16 +185,25 @@ TYPES Term(void){
 	OPMUL mulop;
 	typeA = Factor();
 	while(current==MULOP){
-		mulop=MultiplicativeOperator();		// Save operator in local variable
+		mulop=MultiplicativeOperator();
 		typeB = Factor();
-		if (typeA!=typeB)
-			Error("meme type attendu"); // same type expected
+		if (typeA!=typeB && !((typeA==DOUBLE && typeB==INTEGER) || (typeA==INTEGER && typeB==DOUBLE)))
+			Error("Memes types attendus");
 		if (typeA==DOUBLE) {
-			cout<<"\tfldl	8(%rsp)\t"<<endl;
-			cout<<"\tfldl	(%rsp)\t# first operand -> %st(0) ; second operand -> %st(1)"<<endl;
+			if (typeB==INTEGER) {
+				cout << "\tfildl (%rsp)\t" << endl; 
+			} else { // DOUBLE
+				cout<<"\tfldl	(%rsp)\t"<<endl;
+			}
+			cout<<"\tfldl	8(%rsp)"<<endl;
 		} else if (typeA==INTEGER || typeA==BOOLEAN) {
-			cout << "\tpop %rbx"<<endl;	// get first operand
-			cout << "\tpop %rax"<<endl;	// get second operand
+			if (typeB==DOUBLE) {
+				cout << "\tfldl (%rsp)\t" << endl;
+				cout << "\tfildl 8(%rsp)\t" << endl; 
+			} else {
+				cout << "\tpop %rbx"<<endl;
+				cout << "\tpop %rax"<<endl;
+			}
 		}
 		switch(mulop){
 			case AND:
@@ -204,7 +213,15 @@ TYPES Term(void){
 				cout << "\tpush %rax"<<endl;			// store result
 				break;
 			case MUL:
-				if (typeA==INTEGER) {
+				if (typeA == DOUBLE && typeB == INTEGER) {
+					cout << "\tfmulp	%st(0),%st(1)\t# %st(0) <- op1 * op2 ; %st(1)=null"<<endl;
+					cout << "\tfstpl 8(%rsp)"<<endl; 
+					cout << "\taddq $8, %rsp"<<endl;
+				} else if (typeA == INTEGER && typeB == DOUBLE) {
+					cout << "\tfmulp	%st(0),%st(1)\t# %st(0) <- op1 * op2 ; %st(1)=null"<<endl;
+					cout << "\tfstpl 8(%rsp)"<<endl; 
+					cout << "\taddq $8, %rsp"<<endl;
+				} else if (typeA==INTEGER) {
 				cout << "\tmulq	%rbx"<<endl;	// a * b -> %rdx:%rax
 				cout << "\tpush %rax\t# MUL"<<endl;	// store result
 				} else if (typeA == DOUBLE) {
@@ -216,12 +233,20 @@ TYPES Term(void){
 				}
 				break;
 			case DIV:
-				if (typeA==INTEGER) {
-					cout << "\tmovq $0, %rdx"<<endl; 	// Higher part of numerator  
-					cout << "\tdiv %rbx"<<endl;			// remainder goes to %rdx
-					cout << "\tpush %rax\t# DIV"<<endl;		// store result
+				if (typeA == DOUBLE && typeB == INTEGER) {
+					cout << "\tfdivp	%st(0),%st(1)"<<endl;
+					cout << "\tfstpl 8(%rsp)"<<endl; 
+					cout << "\taddq $8, %rsp"<<endl;
+				} else if (typeA == INTEGER && typeB == DOUBLE) {
+					cout << "\tfdivp	%st(0),%st(1)"<<endl;
+					cout << "\tfstpl 8(%rsp)"<<endl; 
+					cout << "\taddq $8, %rsp"<<endl;
+				} else if (typeA==INTEGER) {
+					cout << "\tmovq $0, %rdx"<<endl; 
+					cout << "\tdiv %rbx"<<endl;
+					cout << "\tpush %rax\t# DIV"<<endl;	
 				} else if (typeA == DOUBLE) {
-					cout<<"\tfdivrp	%st(0),%st(1)\t# %st(0) <- op1 / op2 ; %st(1)=null"<<endl;
+					cout<<"\tfdivp	%st(0),%st(1)"<<endl;
 					cout<<"\tfstpl 8(%rsp)"<<endl; 
 					cout<<"\taddq $8, %rsp"<<endl;
 				} else {
@@ -264,75 +289,76 @@ TYPES SimpleExpression(void){
 	OPADD adop;
 	typeA = Term();
 	while(current==ADDOP){
-		adop=AdditiveOperator();		// Save operator in local variable
+		adop=AdditiveOperator();
 		typeB = Term();
 		if (typeA!=typeB && !((typeA==DOUBLE && typeB==INTEGER) || (typeA==INTEGER && typeB==DOUBLE)))
 			Error("assignation de meme type ou double et entier attendu");
 		if (typeA!=INTEGER && typeA!=BOOLEAN && typeA!=DOUBLE)
-			Error("Entier, booléen ou double attendu"); // same type expected
+			Error("Entier, booléen ou double attendu"); 
+		// chargement des valeurs dans les registres celons les types
+		if (typeA==DOUBLE) {
+			if (typeB==INTEGER) {
+				cout << "\tfildl (%rsp)\t" << endl; 
+			} else { // DOUBLE
+				cout<<"\tfldl	(%rsp)\t"<<endl;
+			}
+			cout<<"\tfldl	8(%rsp)"<<endl;
+		} else if (typeA==INTEGER || typeA==BOOLEAN) { // BOOLEAN et DOUBLE impossible car déjà traité
+			if (typeB==DOUBLE) {
+				cout << "\tfldl (%rsp)\t" << endl;
+				cout << "\tfildl 8(%rsp)\t" << endl; 
+			} else {
+				cout << "\tpopq %rbx"<<endl;
+				cout << "\tpopq %rax"<<endl;
+			}
+		} else {
+			Error("Entier, booléen ou double attendu");
+		}
 		switch(adop){
 			case OR:
 				if (typeA!=BOOLEAN)
-					Error("Booléens attendus"); // same type expected
-					cout << "\tpop %rbx"<<endl;	// get first operand
-					cout << "\tpop %rax"<<endl;	// get second operand
-					cout << "\taddq	%rbx, %rax\t# OR"<<endl;// operand1 OR operand2
-					cout << "\tpush %rax"<<endl;			// store result
+					Error("Booléens attendus");
+					cout << "\taddq	%rbx, %rax\t# OR"<<endl;
+					cout << "\tpush %rax"<<endl;		
 				break;			
 			case ADD:
 				if (typeA == DOUBLE && typeB == INTEGER) {
-					cout << "\tfildl (%rsp)\t" << endl; // load int
-					cout << "\tfldl 8(%rsp)\t" << endl; // load double
 					cout << "\tfaddp	%st(0),%st(1)"<<endl;
 					cout << "\tfstpl 8(%rsp)"<<endl; 
 					cout << "\taddq $8, %rsp"<<endl;
 				} else if (typeA == INTEGER && typeB == DOUBLE) {
-					cout << "\tfldl (%rsp)\t" << endl; // load double
-					cout << "\tfildl 8(%rsp)\t" << endl; // load int
 					cout << "\tfaddp	%st(0),%st(1)"<<endl;
 					cout << "\tfstpl 8(%rsp)"<<endl; 
 					cout << "\taddq $8, %rsp"<<endl;
 				} else if (typeA==INTEGER) {
-					cout << "\tpop %rbx"<<endl;	// get first operand
-					cout << "\tpop %rax"<<endl;	// get second operand
-					cout << "\taddq	%rbx, %rax\t# ADD"<<endl;	// add both operands
-					cout << "\tpush %rax"<<endl;			// store result
+					cout << "\taddq	%rbx, %rax\t# ADD"<<endl;
+					cout << "\tpush %rax"<<endl;		
 				} else if (typeA == DOUBLE) {
-					cout<<"\tfldl	8(%rsp)\t"<<endl;
-					cout<<"\tfldl	(%rsp)"<<endl;
 					cout<<"\tfaddp	%st(0),%st(1)"<<endl;
 					cout<<"\tfstpl 8(%rsp)"<<endl; 
 					cout<<"\taddq $8, %rsp"<<endl;
 				} else {
-					Error("Entiers ou doubles attendus"); // same type expected
+					Error("Entiers ou doubles attendus");
 				}
 				break;			
 			case SUB:
 				if (typeA!=INTEGER && typeA!=DOUBLE)
-					Error("Entiers attendus"); // same type expected
+					Error("Entiers attendus"); 
 				if (typeA == DOUBLE && typeB == INTEGER) {
-					cout << "\tfildl (%rsp)\t" << endl; // load int
-					cout << "\tfldl 8(%rsp)\t" << endl; // load double
 					cout << "\tfsubp	%st(0),%st(1)"<<endl;
 					cout << "\tfstpl 8(%rsp)"<<endl; 
 					cout << "\taddq $8, %rsp"<<endl;
 				} else if (typeA == INTEGER && typeB == DOUBLE) {
-					cout << "\tfldl (%rsp)\t" << endl; // load double
-					cout << "\tfildl 8(%rsp)\t" << endl; // load int
 					cout << "\tfsubp	%st(0),%st(1)"<<endl;
 					cout << "\tfstpl 8(%rsp)"<<endl; 
 					cout << "\taddq $8, %rsp"<<endl;
 				} else	if (typeA == DOUBLE) {
-					cout<<"\tfldl	(%rsp)\t"<<endl;
-					cout<<"\tfldl	8(%rsp)\t# first operand -> %st(0) ; second operand -> %st(1)"<<endl;
-					cout<<"\tfsubp	%st(0),%st(1)\t# %st(0) <- op1 - op2 ; %st(1)=null"<<endl;
+					cout<<"\tfsubp \t%st(0),%st(1)" << endl; 
 					cout<<"\tfstpl 8(%rsp)"<<endl;
 					cout<<"\taddq	$8, %rsp\t# result on stack's top"<<endl; 
 				} else if (typeA==INTEGER) {
-					cout << "\tpop %rbx"<<endl;	// get first operand
-					cout << "\tpop %rax"<<endl;	// get second operand
-					cout << "\tsubq	%rbx, %rax\t# SUB"<<endl;	// substract both operands
-					cout << "\tpush %rax"<<endl;			// store result
+					cout << "\tsubq	%rbx, %rax\t# SUB"<<endl;
+					cout << "\tpushq %rax"<<endl;
 				}
 				break;
 			default:
@@ -579,7 +605,7 @@ void DisplayStatement(void){
 	type = Expression();
 	if (type == INTEGER){
 		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
-		cout << "\tmovq $FormatStringInt, %rdi   \t# \"%llu\\n\""<<endl; 
+		cout << "\tmovq $FormatStringSignedInt, %rdi   \t# \"%llu\\n\""<<endl; 
 		cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
 	} else if (type == BOOLEAN){
 		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
@@ -883,7 +909,7 @@ int main(void){	// First version : Source code on standard input and assembly co
 	// Header for gcc assembler / linker
 	cout << "\t\t\t# This code was produced by the CERI Compiler"<<endl;
 	cout << ".data"<<endl;
-	cout << "FormatStringInt:\t.string \"%llu\\n\"\t# used by printf to display 64-bit unsigned integers"<<endl; 
+	cout << "FormatStringSignedInt:\t.string \"%lld\\n\"\t# used by printf to display 64-bit unsigned integers"<<endl; 
 	cout << "FormatStringDouble:\t.string \"%f\\n\"\t# used by printf to display double precision floating point numbers"<<endl;
 	cout << "FormatStringCHAR:\t.string \"%c\\n\"\t# used by printf to display CHARacters"<<endl;
 	cout << "FormatStringTrue:\t.string \"TRUE\\n\"\t# used by printf to display the boolean value TRUE"<<endl; 
