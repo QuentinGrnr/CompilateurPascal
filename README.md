@@ -1,21 +1,23 @@
 # CERIcompiler
 
 ### Ajout personnels
+**__- Case Statement :__**
+Permet de gérer des conditions multiples celon la valeur d'une expression/variable et d'executer le code correspondant à la première condition vérifiée.
+**__- Ajout de default case dans CASESTATEMENT :__**
+Permet de gérer le cas ou aucune condition n'est vérifiée.
 **__- Display : modification du display pour qu'il fonctionne sur mon système__**
 J'ai du annalyser le fonctionnement du printf en assembleur sur mon systeme pour comprendre pourquoi le code assembleur donné ne fonctionnait pas sur mon système.
 **__- Ajout de la fonction getType : permet de récupérer le type d'une variable__**
 Cette fonction permet de récupérer le type d'une variable en fonction de son nom. Elle est utilisée pour vérifier que les types des variables sont compatibles lors d'une assignation.
 **__- Ajout des KEYWORDS "TRUE" et "FALSE" : permet de définir la valeur booléenne__**
-**__- Ajout de default case dans CASESTATEMENT :__**
-Permet de gérer le cas ou aucune condition n'est vérifiée.
 **__- Ajout de NOT :__**
 permet de faire la négation d'une expression booléenne.
 **__- Ajout d'opérations int avec float :__**
 Permet l'addition, la soustraction, la multiplication et la division entre un entier et un flottant peut importe l'ordre.
+**__- Ajout de la comparaison int avec float :__**
+Permet de comparer un entier avec un flottant peu importe l'ordre.
 
 ### A faire
-- ajout operations int with float
-- comparaison int with float
 - ajout précision erreur (fonction)
 - ajout case float
 

@@ -153,7 +153,7 @@ TYPES Factor(void){
 		current=(TOKEN) lexer->yylex();
 		type = Factor();
 		if (type!=BOOLEAN)
-			Error("Booléen attendu");
+			Error("Booléen attendu pour la négation");
 		cout << "\tpop %rax"<<endl;
 		cout << "\txorq $0xFFFFFFFFFFFFFFFF, %rax"<<endl;
 		cout << "\tpush %rax"<<endl;
@@ -188,7 +188,7 @@ TYPES Term(void){
 		mulop=MultiplicativeOperator();
 		typeB = Factor();
 		if (typeA!=typeB && !((typeA==DOUBLE && typeB==INTEGER) || (typeA==INTEGER && typeB==DOUBLE)))
-			Error("Memes types attendus");
+			Error("Memes types ou double et entier attendus");
 		if (typeA==DOUBLE) {
 			if (typeB==INTEGER) {
 				cout << "\tfildl (%rsp)\t" << endl; 
@@ -208,7 +208,7 @@ TYPES Term(void){
 		switch(mulop){
 			case AND:
 				if (typeA!=BOOLEAN)
-					Error("Booléens attendus"); // same type expected
+					Error("Booléens attendus pour AND (&&) "); // same type expected
 				cout << "\tandq	%rbx, %rax\t# AND"<<endl;	// operand1 AND operand2
 				cout << "\tpush %rax"<<endl;			// store result
 				break;
@@ -317,7 +317,7 @@ TYPES SimpleExpression(void){
 		switch(adop){
 			case OR:
 				if (typeA!=BOOLEAN)
-					Error("Booléens attendus");
+					Error("Booléens attendus pour OR (||) ");
 					cout << "\taddq	%rbx, %rax\t# OR"<<endl;
 					cout << "\tpush %rax"<<endl;		
 				break;			
@@ -343,7 +343,7 @@ TYPES SimpleExpression(void){
 				break;			
 			case SUB:
 				if (typeA!=INTEGER && typeA!=DOUBLE)
-					Error("Entiers attendus"); 
+					Error("Entiers attendus pour la soustraction");
 				if (typeA == DOUBLE && typeB == INTEGER) {
 					cout << "\tfsubp	%st(0),%st(1)"<<endl;
 					cout << "\tfstpl 8(%rsp)"<<endl; 
@@ -441,7 +441,7 @@ void VarDeclarationPart(void) {
 		VarDeclaration();
 	}
 	if (current!=DOT)
-		Error("caractère '.' attendu");
+		Error("caractère '.' attendu pour finir la déclaration des variables");
 	current=(TOKEN) lexer->yylex();
 }
 
@@ -476,18 +476,31 @@ TYPES Expression(void){
 	if(current==RELOP){
 		oprel=RelationalOperator();
 		typeB=SimpleExpression();
-		if (typeA!=typeB)
-			Error("Memes types attendus"); // same type expected
+		if (typeA!=typeB && !((typeA==DOUBLE && typeB==INTEGER) || (typeA==INTEGER && typeB==DOUBLE)))
+			Error("Memes types attendus ou double et entier attendus");
 		if (typeA==INTEGER || typeA==BOOLEAN){
-			cout << "\tpop %rax"<<endl;
-			cout << "\tpop %rbx"<<endl;
-			cout << "\tcmpq %rax, %rbx"<<endl;
+			if (typeB==DOUBLE) {
+				cout << "\tfldl (%rsp)\t" << endl; 
+				cout << "\tfildl 8(%rsp)\t" << endl; 
+				cout << "\taddq $16, %rsp"<<endl;
+				cout << "\tfcomip %st(1)"<<endl;
+				cout << "\tfaddp %st(1)\t# pop nothing"<<endl;
+			} else {
+				cout << "\tpop %rax"<<endl;
+				cout << "\tpop %rbx"<<endl;
+				cout << "\tcmpq %rax, %rbx"<<endl;
+			}
 		} else if (typeA==DOUBLE){
-			cout<<"\tfldl	(%rsp)\t"<<endl;
-			cout<<"\tfldl	8(%rsp)\t# first operand -> %st(0) ; second operand -> %st(1)"<<endl;
-			cout<<"\t addq $16, %rsp\t# 2x pop nothing"<<endl;
-			cout<<"\tfcomip %st(1)"<<endl;
-			cout<<"\tfaddp %st(1)\t# pop nothing"<<endl;
+			if (typeB==INTEGER) {
+				cout << "\tfildl (%rsp)\t" << endl; 
+				
+			} else {
+				cout << "\tfldl (%rsp)\t" << endl; 
+			}
+				cout << "\tfldl 8(%rsp)\t" << endl; 
+				cout << "\taddq $16, %rsp"<<endl;
+				cout << "\tfcomip %st(1)"<<endl;
+				cout << "\tfaddp %st(1)\t# pop nothing"<<endl;
 		} else if (typeA==CHAR){
 			cout << "\tpop %rax"<<endl;
 			cout << "\tpop %rbx"<<endl;
@@ -588,7 +601,7 @@ string AssignementStatement(void){
 	current=(TOKEN) lexer->yylex();
 	type1=DeclaredVariables[variable];
 	if(current!=ASSIGN)
-		Error("':=' attendu");
+		Error("':=' attendu pour l'assignation");
 	current=(TOKEN) lexer->yylex();
 	type2=Expression();
 	if (type1!=type2 && !((type1==DOUBLE && type2==INTEGER) || (type1==INTEGER && type2==DOUBLE)))
