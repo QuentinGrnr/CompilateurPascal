@@ -18,7 +18,7 @@ Permet l'addition, la soustraction, la multiplication et la division entre un en
 Permet de comparer un entier avec un flottant peu importe l'ordre.
 
 ### A faire
-- ajout précision erreur (fonction)
+
 - ajout case float
 
 A simple compiler.

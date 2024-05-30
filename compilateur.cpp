@@ -749,7 +749,6 @@ void BlockStatement(void){
 }
 
 void CaseComparaison (TYPES typeExpression){
-	// aprés mure réflexion, je n'ai pas trouvé d'autre solution que de dupliquer le code de la fonction Expression() pour la comparaison
 	TYPES typeFactor = Factor();
 	if (typeFactor!=typeExpression)
 		Error("Cas de même type que l'expression attendu (case)");
@@ -761,6 +760,20 @@ void CaseComparaison (TYPES typeExpression){
 		cout << "\tpop %rax"<<endl;
 		cout << "\tcmpb %al, %bl"<<endl;
 		cout << "\tje CASEVRAIS"<<TagNumber<<endl;
+	} else if (typeFactor==DOUBLE){
+		// Charger la valeur double dans un registre XMM
+        cout << "\tmovsd %xmm0, (%rsp)" << endl; // Charger le double de la pile dans %xmm0
+        cout << "\taddq $8, %rsp" << endl; // Ajuster le pointeur de pile
+
+        // Charger la valeur de comparaison dans un autre registre XMM
+        cout << "\tmovsd %xmm1, (%rsp)" << endl; // Charger le double de comparaison dans %xmm1
+        cout << "\taddq $8, %rsp" << endl; // Ajuster le pointeur de pile
+
+        // Comparer les valeurs en %xmm0 et %xmm1
+        cout << "\tucomisd %xmm0, %xmm1" << endl;
+
+        // Prendre une décision basée sur la comparaison
+        cout << "\tje CASEVRAIS" << TagNumber << endl;
 	} else {
 		Error("Entier, booléen ou char attendu pour les cases");
 	}
@@ -809,8 +822,11 @@ void CaseStatement(void){
 		Error("Mot clé 'OF' attendu");
 	
 	current=(TOKEN) lexer->yylex();
-	if (typeExpression==DOUBLE)
-		Error("Type double non implenté pour les cases");
+	if (typeExpression==DOUBLE){
+    	cout << "\tmovsd %xmm0, (%rsp)\t" << endl; // Charger la valeur double dans le registre XMM0
+	} else {
+		cout << "\tpop %rbx"<<endl; // l'expression est stockée dans rbx durant tout le casestatement
+	}
 	cout << "\tpop %rbx"<<endl; // l'expression est stockée dans rbx durant tout le casestatement
 
 	CaseListElement(typeExpression, TagNumber1); // type = pour eviter les comparaisons de types différents, TagNumber1 = permettre le jmp à la fin du casestatement si une condition est vérifiée
