@@ -20,20 +20,22 @@ using namespace std;
 %option yylineno
 
 charconst	\'\\?.\'
-ws      [ \t\n\r]+ 
-alpha   [A-Za-z]
-digit   [0-9]
-number  {digit}+(\.{digit}+)?
-boolVal ("TRUE"|"FALSE")
-keyword ("IF"|"THEN"|"ELSE"|"WHILE"|"FOR"|"DO"|"TO"|"BEGIN"|"END"|"VAR"|"INTEGER"|"BOOLEAN"|"DISPLAY"|"DOWNTO"|"DOUBLE"|"CHAR"|"TRUE"|"FALSE"|"NONE"|"CASE"|"OF"|"DEFAULT")
-id	{alpha}({alpha}|{digit})*
-addop	(\+|\-|\|\|) 
-mulop	(\*|\/|%|\&\&) 
-relop	(\<|\>|"=="|\<=|\>=|!=) 
-unknown [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.]+
+ws          [ \t\n\r]+ 
+alpha       [A-Za-z]
+digit       [0-9]
+number      {digit}+(\.{digit}+)?
+boolVal     ("TRUE"|"FALSE")
+keyword     ("IF"|"THEN"|"ELSE"|"WHILE"|"FOR"|"DO"|"TO"|"BEGIN"|"END"|"VAR"|"INTEGER"|"BOOLEAN"|"DISPLAY"|"DOWNTO"|"DOUBLE"|"CHAR"|"TRUE"|"FALSE"|"NONE"|"CASE"|"OF"|"DEFAULT")
+id          {alpha}({alpha}|{digit})*
+addop       (\+|\-|\|\|) 
+mulop       (\*|\/|%|\&\&) 
+relop       (\<|\>|"=="|\<=|\>=|!=) 
+stringconst      \"({charconst}|[^\"])*\"
+unknown     [^\"A-Za-z0-9 \n\r\t\(\)\<\>\=\!\%\&\|\}\-\;\.]+
 
 %%
 
+{stringconst}	return STRINGCONST;
 {addop}		return ADDOP;
 {mulop}		return MULOP;
 {relop}		return RELOP;

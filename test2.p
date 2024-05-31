@@ -1,6 +1,6 @@
 VAR		a,b :	INTEGER;
 		c1,c2:	CHAR;
-		num, denum, frac:		DOUBLE.
+		num, denum, frac, intD:		DOUBLE.
 BEGIN
     a := 1; 
     b := 2 + 3; 
@@ -38,4 +38,15 @@ BEGIN
         num := num + frac;
         denum := denum - frac
     END
+END;
+intD:=1.5 + 1;
+CASE intD OF
+	1.5: DISPLAY 1;
+	2.5: DISPLAY 2;
+	DEFAULT: DISPLAY 4
+END;
+CASE intD OF
+	1.5: DISPLAY 1;
+	2.5: DISPLAY 2;
+	DEFAULT: DISPLAY 4
 END.

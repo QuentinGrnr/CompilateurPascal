@@ -34,7 +34,7 @@ enum KEYWORDS {IF, THEN, ELSE, WHILE, FOR, DO, TO, BEGIN, END, VAR, DISPLAY, DOW
 enum OPREL {EQU, DIFF, INF, SUP, INFE, SUPE, WTFR};
 enum OPADD {ADD, SUB, OR, WTFA};
 enum OPMUL {MUL, DIV, MOD, AND ,WTFM};
-enum TYPES {INTEGER, BOOLEAN, DOUBLE, CHAR};
+enum TYPES {INTEGER, BOOLEAN, DOUBLE, CHAR, STRING};
 
 TOKEN current;				// Current token
 
@@ -157,8 +157,21 @@ TYPES Factor(void){
 		cout << "\tpop %rax"<<endl;
 		cout << "\txorq $0xFFFFFFFFFFFFFFFF, %rax"<<endl;
 		cout << "\tpush %rax"<<endl;
-	} else
-		Error("'(', chiffre ou lettre attendue");
+	} else if (current==STRINGCONST){
+        string str = lexer->YYText();
+        int length = str.length() + 1; // +1 pour le caractère de fin de chaîne
+        cout << "\tmov rdi, " << length << endl;
+        cout << "\tcall malloc" << endl;
+        cout << "\tmov rbx, rax" << endl;
+        for (int i = 0; i < length; ++i) {
+            cout << "\tmov byte ptr [rbx + " << i << "], " << static_cast<int>(str[i]) << endl;
+        }
+        cout << "\tpush rbx" << endl;
+        current = (TOKEN) lexer->yylex();
+        type = STRING;
+	} else {
+		Error("Chiffre, lettre ou '(' attendu");
+	}
 	return type;
 }
 
@@ -761,19 +774,10 @@ void CaseComparaison (TYPES typeExpression){
 		cout << "\tcmpb %al, %bl"<<endl;
 		cout << "\tje CASEVRAIS"<<TagNumber<<endl;
 	} else if (typeFactor==DOUBLE){
-		// Charger la valeur double dans un registre XMM
-        cout << "\tmovsd %xmm0, (%rsp)" << endl; // Charger le double de la pile dans %xmm0
-        cout << "\taddq $8, %rsp" << endl; // Ajuster le pointeur de pile
-
-        // Charger la valeur de comparaison dans un autre registre XMM
-        cout << "\tmovsd %xmm1, (%rsp)" << endl; // Charger le double de comparaison dans %xmm1
-        cout << "\taddq $8, %rsp" << endl; // Ajuster le pointeur de pile
-
-        // Comparer les valeurs en %xmm0 et %xmm1
-        cout << "\tucomisd %xmm0, %xmm1" << endl;
-
-        // Prendre une décision basée sur la comparaison
-        cout << "\tje CASEVRAIS" << TagNumber << endl;
+		cout << "\tfldl (%rsp)"<<endl;
+		cout << "\tfucomip %st(1), %st(0)"<<endl; 
+		cout << "\tje CASEVRAIS"<<TagNumber<<endl;
+		cout << "\taddq $8, %rsp"<<endl;
 	} else {
 		Error("Entier, booléen ou char attendu pour les cases");
 	}
@@ -798,6 +802,7 @@ void CaseListElement(TYPES typeExpression, int caseTagNumber){
 	current=(TOKEN) lexer->yylex();
 	if ((current==KEYWORD && getKeyword()!=END) && (strcmp(lexer->YYText(),";")!=0)){ // si le statement n'est pas vide
 		cout << "CASEVRAIS"<<TagNumber<<":"<<endl;
+		cout << "\taddq $8, %rsp"<<endl;
 		Statement();
 		cout << "\tjmp CASEFINISHED"<<caseTagNumber<<endl;
 	} else if (strcmp(lexer->YYText(),";")==0){ // si le statement est vide
@@ -822,13 +827,12 @@ void CaseStatement(void){
 		Error("Mot clé 'OF' attendu");
 	
 	current=(TOKEN) lexer->yylex();
-	if (typeExpression==DOUBLE){
-    	cout << "\tmovsd %xmm0, (%rsp)\t" << endl; // Charger la valeur double dans le registre XMM0
+	if (typeExpression==DOUBLE){ // on charge la valeur double pour la comparer a tout les cas (pas dans xmm0)*
+		cout << "\tfldl (%rsp)"<<endl;
+		cout << "\taddq $8, %rsp"<<endl;
 	} else {
 		cout << "\tpop %rbx"<<endl; // l'expression est stockée dans rbx durant tout le casestatement
 	}
-	cout << "\tpop %rbx"<<endl; // l'expression est stockée dans rbx durant tout le casestatement
-
 	CaseListElement(typeExpression, TagNumber1); // type = pour eviter les comparaisons de types différents, TagNumber1 = permettre le jmp à la fin du casestatement si une condition est vérifiée
 	cout << "ENDCASE"<<TagNumber<<":"<<endl;
 	while(current==SEMICOLON){
