@@ -62,7 +62,7 @@ void Error(string s){
 // VarDeclarationPart := "VAR" VarDeclaration {";" VarDeclaration} "."
 // VarDeclaration := Ident {"," Ident} ":" Type
 // StatementPart := Statement {";" Statement} "."
-// Statement := AssignementStatement | IfStatement | WhileStatement | ForStatement | BlockStatement | DisplayStatement
+// Statement := AssignementStatement | IfStatement | WhileStatement | ForStatement | BlockStatement | DisplayStatement | NotStatement | CaseStatement
 
 // AssignementStatement := Letter "=" Expression
 // IfStatement := "IF" Expression "THEN" Statement [ "ELSE" Statement ]
@@ -72,7 +72,8 @@ void Error(string s){
 // CaseStatement ::= "CASE" Expression "OF" CaseListElement {; CaseListElement } "END"
 // CaseListElement ::= CaseLabelList ":" Statement | Empty
 // CaseLabelList ::= Factor {, Factor }
-// Empty::=
+// DisplayStatement := "DISPLAY" Expression
+// NotStatement := "NOT" Factor
 
 // Expression := SimpleExpression [RelationalOperator SimpleExpression]
 // SimpleExpression := Term {AdditiveOperator Term}
@@ -112,7 +113,7 @@ TYPES Number(void){
 	if (nbr.find(".") != string::npos){
 		floatNumber = atof(lexer->YYText());
 		p = (unsigned int *) &floatNumber; 
-		cout << "\tsubq $8, %rsp \t # allocate 8 bytes on stack's top"<<endl;
+		cout << "\tsubq $8, %rsp"<<endl;
 		cout << "\tmovl $"<<*p<<", (%rsp) \t# Conversion of "<<floatNumber<<" (32 bit high part)"<<endl;
 		cout << "\tmovl $"<<*(p+1)<<", 4(%rsp) \t# Conversion of "<<floatNumber<<" (32 bit low part)"<<endl;
 		current=(TOKEN) lexer->yylex();
@@ -130,7 +131,7 @@ TYPES Factor(void){
 		current=(TOKEN) lexer->yylex();
 		type = Expression();
 		if(current!=LPARENT)
-			Error("')' était attendu");		// ")" expected
+			Error("')' était attendu");
 		else
 			current=(TOKEN) lexer->yylex();
 	} else if (current==NUMBER){
@@ -141,7 +142,7 @@ TYPES Factor(void){
 		cout << "\tpush $"<<lexer->YYText()<<endl;
 		current=(TOKEN) lexer->yylex();
 		type = CHAR;
-	} else if (getKeyword()==TRUE){ // a modif 
+	}else if (getKeyword()==TRUE){
 		cout << "\tpush $0xFFFFFFFFFFFFFFFF"<<endl;
 		current=(TOKEN) lexer->yylex();
 		type = BOOLEAN;
@@ -158,15 +159,24 @@ TYPES Factor(void){
 		cout << "\txorq $0xFFFFFFFFFFFFFFFF, %rax"<<endl;
 		cout << "\tpush %rax"<<endl;
 	} else if (current==STRINGCONST){
-        string str = lexer->YYText();
-        int length = str.length() + 1; // +1 pour le caractère de fin de chaîne
-        cout << "\tmov rdi, " << length << endl;
+		string str = lexer->YYText();
+        int length = str.length() + 1;
+
+        cout << "\tmov $" << length << ", %rdi" << endl;
         cout << "\tcall malloc" << endl;
-        cout << "\tmov rbx, rax" << endl;
+        cout << "\tmov %rax, %rbx" << endl;
+
         for (int i = 0; i < length; ++i) {
-            cout << "\tmov byte ptr [rbx + " << i << "], " << static_cast<int>(str[i]) << endl;
+            int char_value = static_cast<int>(str[i]);
+            cout << "\tmovb $" << char_value << ", %al" << endl;
+            cout << "\tmovb %al, " << i << "(%rbx)" << endl;
         }
-        cout << "\tpush rbx" << endl;
+
+        cout << "\tmovb $0, %al" << endl;
+        cout << "\tmovb %al, " << length - 1 << "(%rbx)" << endl;
+
+        cout << "\tpush %rbx" << endl;
+
         current = (TOKEN) lexer->yylex();
         type = STRING;
 	} else {
@@ -221,24 +231,24 @@ TYPES Term(void){
 		switch(mulop){
 			case AND:
 				if (typeA!=BOOLEAN)
-					Error("Booléens attendus pour AND (&&) "); // same type expected
-				cout << "\tandq	%rbx, %rax\t# AND"<<endl;	// operand1 AND operand2
-				cout << "\tpush %rax"<<endl;			// store result
+					Error("Booléens attendus pour AND (&&) ");
+				cout << "\tandq	%rbx, %rax\t# AND"<<endl;
+				cout << "\tpush %rax"<<endl;
 				break;
 			case MUL:
 				if (typeA == DOUBLE && typeB == INTEGER) {
-					cout << "\tfmulp	%st(0),%st(1)\t# %st(0) <- op1 * op2 ; %st(1)=null"<<endl;
+					cout << "\tfmulp	%st(0),%st(1)"<<endl;
 					cout << "\tfstpl 8(%rsp)"<<endl; 
 					cout << "\taddq $8, %rsp"<<endl;
 				} else if (typeA == INTEGER && typeB == DOUBLE) {
-					cout << "\tfmulp	%st(0),%st(1)\t# %st(0) <- op1 * op2 ; %st(1)=null"<<endl;
+					cout << "\tfmulp	%st(0),%st(1)"<<endl;
 					cout << "\tfstpl 8(%rsp)"<<endl; 
 					cout << "\taddq $8, %rsp"<<endl;
 				} else if (typeA==INTEGER) {
 				cout << "\tmulq	%rbx"<<endl;	// a * b -> %rdx:%rax
 				cout << "\tpush %rax\t# MUL"<<endl;	// store result
 				} else if (typeA == DOUBLE) {
-					cout<<"\tfmulp	%st(0),%st(1)\t# %st(0) <- op1 * op2 ; %st(1)=null"<<endl;
+					cout<<"\tfmulp	%st(0),%st(1)"<<endl;
 					cout<<"\tfstpl 8(%rsp)"<<endl; 
 					cout<<"\taddq $8, %rsp"<<endl;
 				} else {
@@ -268,9 +278,9 @@ TYPES Term(void){
 				break;
 			case MOD:
 				if (typeA==INTEGER) {
-					cout << "\tmovq $0, %rdx"<<endl; 	// Higher part of numerator  
-					cout << "\tdiv %rbx"<<endl;			// remainder goes to %rdx
-					cout << "\tpush %rdx\t# MOD"<<endl;		// store result
+					cout << "\tmovq $0, %rdx"<<endl;  
+					cout << "\tdiv %rbx"<<endl;
+					cout << "\tpush %rdx\t# MOD"<<endl;
 				} else {
 					Error("Entiers attendus pour le modulo");
 				}
@@ -308,7 +318,6 @@ TYPES SimpleExpression(void){
 			Error("assignation de meme type ou double et entier attendu");
 		if (typeA!=INTEGER && typeA!=BOOLEAN && typeA!=DOUBLE)
 			Error("Entier, booléen ou double attendu"); 
-		// chargement des valeurs dans les registres celons les types
 		if (typeA==DOUBLE) {
 			if (typeB==INTEGER) {
 				cout << "\tfildl (%rsp)\t" << endl; 
@@ -368,9 +377,9 @@ TYPES SimpleExpression(void){
 				} else	if (typeA == DOUBLE) {
 					cout<<"\tfsubp \t%st(0),%st(1)" << endl; 
 					cout<<"\tfstpl 8(%rsp)"<<endl;
-					cout<<"\taddq	$8, %rsp\t# result on stack's top"<<endl; 
+					cout<<"\taddq	$8, %rsp"<<endl; 
 				} else if (typeA==INTEGER) {
-					cout << "\tsubq	%rbx, %rax\t# SUB"<<endl;
+					cout << "\tsubq	%rbx, %rax"<<endl;
 					cout << "\tpushq %rax"<<endl;
 				}
 				break;
@@ -398,9 +407,12 @@ TYPES Type(void){
 	} else if (strcmp(lexer->YYText(),"CHAR")==0) {
 		current=(TOKEN) lexer->yylex();
 		return CHAR;
+	} else if (strcmp(lexer->YYText(),"STRING")==0) {
+		current=(TOKEN) lexer->yylex();
+		return STRING;
 	}
 	Error("Type attendu");
-	return INTEGER; // to avoid a warning, this line is never reached
+	return INTEGER;
 }
 
 // VarDeclaration := Ident {"," Ident} ":" Type
@@ -409,13 +421,13 @@ void VarDeclaration(void){
 	enum TYPES type;
 	if(current!=ID)
 		Error("Identificateur attendu");
-	idents.insert(lexer->YYText()); // insert the first identifier
+	idents.insert(lexer->YYText());
 	current=(TOKEN) lexer->yylex();
 	while(current==COMMA){
 		current=(TOKEN) lexer->yylex();
 		if(current!=ID)
 			Error("Identificateur attendu");
-		if(idents.find(lexer->YYText())!=idents.end()) // if the identifier is already declared
+		if(idents.find(lexer->YYText())!=idents.end())
 			Error("Identificateur déjà déclaré");
 		idents.insert(lexer->YYText());
 		current=(TOKEN) lexer->yylex();
@@ -438,6 +450,9 @@ void VarDeclaration(void){
 			case CHAR:
 				cout << *it << ":\t.byte 0"<<endl;
 				break;
+			case STRING:
+				cout << *it << ":\t.string \"\""<<endl;
+				break;
 			default:
 				Error("Type inconnu");
 		}
@@ -447,7 +462,7 @@ void VarDeclaration(void){
 
 // VarDeclarationPart := "VAR" VarDeclaration {";" VarDeclaration} "."
 void VarDeclarationPart(void) {
-	current=(TOKEN) lexer->yylex(); // skip the "VAR" keyword
+	current=(TOKEN) lexer->yylex();
 	VarDeclaration();
 	while(current==SEMICOLON){
 		current=(TOKEN) lexer->yylex();
@@ -462,7 +477,7 @@ void VarDeclarationPart(void) {
 // RelationalOperator := "==" | "!=" | "<" | ">" | "<=" | ">="  
 OPREL RelationalOperator(void){
 	OPREL oprel;
-	if(strcmp(lexer->YYText(),"==")==0) // strcmp renvoie 0 si les deux chaines sont égales et un nombre positif ou négatif si elles sont différentes
+	if(strcmp(lexer->YYText(),"==")==0) 
 		oprel=EQU;
 	else if(strcmp(lexer->YYText(),"!=")==0)
 		oprel=DIFF;
@@ -618,7 +633,7 @@ string AssignementStatement(void){
 	current=(TOKEN) lexer->yylex();
 	type2=Expression();
 	if (type1!=type2 && !((type1==DOUBLE && type2==INTEGER) || (type1==INTEGER && type2==DOUBLE)))
-		Error("Memes types attendus");
+		Error("Memes types attendus ou double et entier attendus");
 	cout << "\tpop "<<variable<<endl;
 	return variable;	
 }
@@ -652,8 +667,13 @@ void DisplayStatement(void){
 		cout << "\tpop %rsi   \t# The value to be displayed"<<endl;
 		cout << "\tmovq $FormatStringCHAR, %rdi   \t# \"%c\\n\""<<endl;
 		cout << "\txorl	%eax, %eax    \t# No floating point arguments"<<endl;
-		} else {
+	} else if (type == STRING){
+		cout << "\tpop %rsi   \t# The address of the string to be displayed" << endl;
+        cout << "\tmovq $FormatStringString, %rdi   \t# \"%s\\n\"" << endl;
+        cout << "\txorl %eax, %eax    \t# No floating point arguments" << endl;
+	} else {
 		Error("Entier ou booléen attendu");
+	
 	}
 	cout << "\tcall printf@PLT   \t # Display the value"<<endl;
 }
@@ -667,8 +687,8 @@ void IfStatement(void){
 	current=(TOKEN) lexer->yylex();
 	Expression();
 	cout << "\tpop %rax"<<endl;
-	cout << "\tcmpq $0, %rax"<<endl; // compare with 0 to know if the expression is false
-	cout << "\tje ELSE"<<TagNumber1<<endl; // if false, jump to the else statement
+	cout << "\tcmpq $0, %rax"<<endl;
+	cout << "\tje ELSE"<<TagNumber1<<endl;
 	if(current!=KEYWORD && getKeyword()!=THEN)
 		Error("Mot clé 'THEN' attendu");
 	current=(TOKEN) lexer->yylex();
@@ -692,8 +712,8 @@ void WhileStatement(void){
 	cout << "TESTWHILE"<<TagNumber1<<":"<<endl;
 	Expression();
 	cout << "\tpop %rax"<<endl;
-	cout << "\tcmpq $0, %rax"<<endl; // compare with 0 to know if the expression is false
-	cout << "\tje FINWHILE"<<TagNumber1<<endl; // if false, jump to the end of the while statement
+	cout << "\tcmpq $0, %rax"<<endl;
+	cout << "\tje FINWHILE"<<TagNumber1<<endl;
 	if(current!=KEYWORD && getKeyword()!=DO)
 		Error("Mot clé 'DO' attendu");
 	current=(TOKEN) lexer->yylex();
@@ -736,9 +756,9 @@ void ForStatement(void){
 	current=(TOKEN) lexer->yylex();
 	Statement();
 	if (to){
-		cout << "\tincq "<<variable<<endl; // increment the variable
+		cout << "\tincq "<<variable<<endl;
 	} else {
-		cout << "\tdecq "<<variable<<endl; // decrement the variable
+		cout << "\tdecq "<<variable<<endl;
 	}
 	cout << "\tjmp DEBUTFOR"<<TagNumber1<<endl;
 
@@ -827,11 +847,11 @@ void CaseStatement(void){
 		Error("Mot clé 'OF' attendu");
 	
 	current=(TOKEN) lexer->yylex();
-	if (typeExpression==DOUBLE){ // on charge la valeur double pour la comparer a tout les cas (pas dans xmm0)*
+	if (typeExpression==DOUBLE){
 		cout << "\tfldl (%rsp)"<<endl;
 		cout << "\taddq $8, %rsp"<<endl;
 	} else {
-		cout << "\tpop %rbx"<<endl; // l'expression est stockée dans rbx durant tout le casestatement
+		cout << "\tpop %rbx"<<endl;
 	}
 	CaseListElement(typeExpression, TagNumber1); // type = pour eviter les comparaisons de types différents, TagNumber1 = permettre le jmp à la fin du casestatement si une condition est vérifiée
 	cout << "ENDCASE"<<TagNumber<<":"<<endl;
@@ -947,6 +967,7 @@ int main(void){	// First version : Source code on standard input and assembly co
 	cout << "FormatStringCHAR:\t.string \"%c\\n\"\t# used by printf to display CHARacters"<<endl;
 	cout << "FormatStringTrue:\t.string \"TRUE\\n\"\t# used by printf to display the boolean value TRUE"<<endl; 
 	cout << "FormatStringFalse:\t.string \"FALSE\\n\"\t# used by printf to display the boolean value FALSE"<<endl; 
+	cout << "FormatStringString:\t.string \"%s\\n\"\t# used by printf to display strings"<<endl;
 	// Let's proceed to the analysis and code production
 	current=(TOKEN) lexer->yylex();
 	Program();
